@@ -85,12 +85,11 @@ class LyftMetric(BaseMetric):
                 the model.
         """
         for data_sample in data_samples:
-            result = dict()
             pred_3d = data_sample['pred_instances_3d']
             pred_2d = data_sample['pred_instances']
             for attr_name in pred_3d:
                 pred_3d[attr_name] = pred_3d[attr_name].to('cpu')
-            result['pred_instances_3d'] = pred_3d
+            result = {'pred_instances_3d': pred_3d}
             for attr_name in pred_2d:
                 pred_2d[attr_name] = pred_2d[attr_name].to('cpu')
             result['pred_instances'] = pred_2d
@@ -163,7 +162,7 @@ class LyftMetric(BaseMetric):
             jsonfile_prefix = osp.join(tmp_dir.name, 'results')
         else:
             tmp_dir = None
-        result_dict = dict()
+        result_dict = {}
         sample_id_list = [result['sample_idx'] for result in results]
 
         for name in results[0]:
@@ -196,24 +195,32 @@ class LyftMetric(BaseMetric):
         data = pd.read_csv(sample_list_path)
         Id_list = list(data['Id'])
         pred_list = list(data['PredictionString'])
-        cnt = 0
         print('Converting the json to csv...')
         for token in results.keys():
-            cnt += 1
             predictions = results[token]
-            prediction_str = ''
-            for i in range(len(predictions)):
-                prediction_str += \
-                    str(predictions[i]['score']) + ' ' + \
-                    str(predictions[i]['translation'][0]) + ' ' + \
-                    str(predictions[i]['translation'][1]) + ' ' + \
-                    str(predictions[i]['translation'][2]) + ' ' + \
-                    str(predictions[i]['size'][0]) + ' ' + \
-                    str(predictions[i]['size'][1]) + ' ' + \
-                    str(predictions[i]['size'][2]) + ' ' + \
-                    str(Quaternion(list(predictions[i]['rotation']))
-                        .yaw_pitch_roll[0]) + ' ' + \
-                    predictions[i]['name'] + ' '
+            prediction_str = ''.join(
+                str(predictions[i]['score'])
+                + ' '
+                + str(predictions[i]['translation'][0])
+                + ' '
+                + str(predictions[i]['translation'][1])
+                + ' '
+                + str(predictions[i]['translation'][2])
+                + ' '
+                + str(predictions[i]['size'][0])
+                + ' '
+                + str(predictions[i]['size'][1])
+                + ' '
+                + str(predictions[i]['size'][2])
+                + ' '
+                + str(
+                    Quaternion(list(predictions[i]['rotation'])).yaw_pitch_roll[0]
+                )
+                + ' '
+                + predictions[i]['name']
+                + ' '
+                for i in range(len(predictions))
+            )
             prediction_str = prediction_str[:-1]
             idx = Id_list.index(token)
             pred_list[idx] = prediction_str
@@ -249,7 +256,7 @@ class LyftMetric(BaseMetric):
             sample_id = sample_id_list[i]
             sample_token = self.data_infos[sample_id]['token']
             boxes = lidar_lyft_box_to_global(self.data_infos[sample_id], boxes)
-            for i, box in enumerate(boxes):
+            for box in boxes:
                 name = classes[box.label]
                 lyft_anno = dict(
                     sample_token=sample_token,
@@ -289,12 +296,12 @@ class LyftMetric(BaseMetric):
         Returns:
             dict[str, float]: Evaluation results.
         """
-        metric_dict = dict()
+        metric_dict = {}
         for name in result_dict:
-            print('Evaluating bboxes of {}'.format(name))
+            print(f'Evaluating bboxes of {name}')
             ret_dict = self._evaluate_single(
                 result_dict[name], logger=logger, result_name=name)
-        metric_dict.update(ret_dict)
+        metric_dict |= ret_dict
         return metric_dict
 
     def _evaluate_single(self,
@@ -327,7 +334,7 @@ class LyftMetric(BaseMetric):
                             eval_set_map[self.version], output_dir, logger)
 
         # record metrics
-        detail = dict()
+        detail = {}
         metric_prefix = f'{result_name}_Lyft'
 
         for i, name in enumerate(metrics['class_names']):

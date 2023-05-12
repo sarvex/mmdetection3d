@@ -45,7 +45,7 @@ class MultiScaleFlipAug3D(BaseTransform):
         self.img_scale = img_scale if isinstance(img_scale,
                                                  list) else [img_scale]
         self.pts_scale_ratio = pts_scale_ratio \
-            if isinstance(pts_scale_ratio, list) else [float(pts_scale_ratio)]
+                if isinstance(pts_scale_ratio, list) else [float(pts_scale_ratio)]
 
         assert mmengine.is_list_of(self.img_scale, tuple)
         assert mmengine.is_list_of(self.pts_scale_ratio, float)
@@ -60,9 +60,9 @@ class MultiScaleFlipAug3D(BaseTransform):
         if not self.flip and self.flip_direction != ['horizontal']:
             warnings.warn(
                 'flip_direction has no effect when flip is set to False')
-        if (self.flip and not any([(t['type'] == 'RandomFlip3D'
-                                    or t['type'] == 'RandomFlip')
-                                   for t in transforms])):
+        if self.flip and all(
+            t['type'] not in ['RandomFlip3D', 'RandomFlip'] for t in transforms
+        ):
             warnings.warn(
                 'flip has no effect when RandomFlip is not in transforms')
 

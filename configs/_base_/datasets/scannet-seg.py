@@ -115,8 +115,10 @@ train_dataloader = dict(
         pipeline=train_pipeline,
         modality=input_modality,
         ignore_index=len(class_names),
-        scene_idxs=data_root + 'seg_info/train_resampled_scene_idxs.npy',
-        test_mode=False))
+        scene_idxs=f'{data_root}seg_info/train_resampled_scene_idxs.npy',
+        test_mode=False,
+    ),
+)
 test_dataloader = dict(
     batch_size=1,
     num_workers=1,

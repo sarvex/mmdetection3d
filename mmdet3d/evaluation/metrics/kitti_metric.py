@@ -99,7 +99,7 @@ class KittiMetric(BaseMetric):
         data_annos = data_infos['data_list']
         if not self.format_only:
             cat2label = data_infos['metainfo']['categories']
-            label2cat = dict((v, k) for (k, v) in cat2label.items())
+            label2cat = {v: k for (k, v) in cat2label.items()}
             assert 'instances' in data_annos[0]
             for i, annos in enumerate(data_annos):
                 if len(annos['instances']) == 0:
@@ -158,12 +158,11 @@ class KittiMetric(BaseMetric):
         """
 
         for data_sample in data_samples:
-            result = dict()
             pred_3d = data_sample['pred_instances_3d']
             pred_2d = data_sample['pred_instances']
             for attr_name in pred_3d:
                 pred_3d[attr_name] = pred_3d[attr_name].to('cpu')
-            result['pred_instances_3d'] = pred_3d
+            result = {'pred_instances_3d': pred_3d}
             for attr_name in pred_2d:
                 pred_2d[attr_name] = pred_2d[attr_name].to('cpu')
             result['pred_instances'] = pred_2d
@@ -240,7 +239,7 @@ class KittiMetric(BaseMetric):
         Returns:
             dict[str, float]: Results of each evaluation metric.
         """
-        ap_dict = dict()
+        ap_dict = {}
         for name in results_dict:
             if name == 'pred_instances' or metric == 'img_bbox':
                 eval_types = ['bbox']
@@ -251,7 +250,7 @@ class KittiMetric(BaseMetric):
             for ap_type, ap in ap_dict_.items():
                 ap_dict[f'{name}/{ap_type}'] = float('{:.4f}'.format(ap))
 
-            print_log(f'Results of {name}:\n' + ap_result_str, logger=logger)
+            print_log(f'Results of {name}:\n{ap_result_str}', logger=logger)
 
         return ap_dict
 
@@ -286,7 +285,7 @@ class KittiMetric(BaseMetric):
             pklfile_prefix = osp.join(tmp_dir.name, 'results')
         else:
             tmp_dir = None
-        result_dict = dict()
+        result_dict = {}
         sample_id_list = [result['sample_idx'] for result in results]
         for name in results[0]:
             if submission_prefix is not None:
@@ -294,7 +293,7 @@ class KittiMetric(BaseMetric):
             else:
                 submission_prefix_ = None
             if pklfile_prefix is not None:
-                pklfile_prefix_ = osp.join(pklfile_prefix, name) + '.pkl'
+                pklfile_prefix_ = f'{osp.join(pklfile_prefix, name)}.pkl'
             else:
                 pklfile_prefix_ = None
             if 'pred_instances' in name and '3d' in name and name[
@@ -337,7 +336,7 @@ class KittiMetric(BaseMetric):
             list[dict]: A list of dictionaries with the kitti format.
         """
         assert len(net_outputs) == len(self.data_infos), \
-            'invalid list length of network outputs'
+                'invalid list length of network outputs'
         if submission_prefix is not None:
             mmengine.mkdir_or_exist(submission_prefix)
 
@@ -345,7 +344,6 @@ class KittiMetric(BaseMetric):
         print('\nConverting 3D prediction to KITTI format')
         for idx, pred_dicts in enumerate(
                 mmengine.track_iter_progress(net_outputs)):
-            annos = []
             sample_idx = sample_id_list[idx]
             info = self.data_infos[sample_idx]
             # Here default used 'CAM2' to compute metric. If you want to
@@ -393,7 +391,6 @@ class KittiMetric(BaseMetric):
                     anno['score'].append(score)
 
                 anno = {k: np.stack(v) for k, v in anno.items()}
-                annos.append(anno)
             else:
                 anno = {
                     'name': np.array([]),
@@ -406,8 +403,7 @@ class KittiMetric(BaseMetric):
                     'rotation_y': np.array([]),
                     'score': np.array([]),
                 }
-                annos.append(anno)
-
+            annos = [anno]
             if submission_prefix is not None:
                 curr_file = f'{submission_prefix}/{sample_idx:06d}.txt'
                 with open(curr_file, 'w') as f:

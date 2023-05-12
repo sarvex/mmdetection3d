@@ -25,8 +25,7 @@ def parse_args():
         '--snapshot',
         action='store_true',
         help='whether to save online visualization results')
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def main(args):

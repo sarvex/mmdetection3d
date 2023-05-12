@@ -44,12 +44,10 @@ class InstanceSegMetric(BaseMetric):
         for data_sample in data_samples:
             pred_3d = data_sample['pred_pts_seg']
             eval_ann_info = data_sample['eval_ann_info']
-            cpu_pred_3d = dict()
-            for k, v in pred_3d.items():
-                if hasattr(v, 'to'):
-                    cpu_pred_3d[k] = v.to('cpu')
-                else:
-                    cpu_pred_3d[k] = v
+            cpu_pred_3d = {
+                k: v.to('cpu') if hasattr(v, 'to') else v
+                for k, v in pred_3d.items()
+            }
             self.results.append((eval_ann_info, cpu_pred_3d))
 
     def compute_metrics(self, results: list) -> Dict[str, float]:
@@ -81,7 +79,7 @@ class InstanceSegMetric(BaseMetric):
             pred_instance_labels.append(sinlge_pred_results['instance_labels'])
             pred_instance_scores.append(sinlge_pred_results['instance_scores'])
 
-        ret_dict = instance_seg_eval(
+        return instance_seg_eval(
             gt_semantic_masks,
             gt_instance_masks,
             pred_instance_masks,
@@ -89,6 +87,5 @@ class InstanceSegMetric(BaseMetric):
             pred_instance_scores,
             valid_class_ids=self.valid_class_ids,
             class_labels=self.classes,
-            logger=logger)
-
-        return ret_dict
+            logger=logger,
+        )

@@ -104,8 +104,9 @@ test_dataloader = val_dataloader
 val_evaluator = dict(
     type='NuScenesMetric',
     data_root=data_root,
-    ann_file=data_root + 'nuscenes_infos_val.pkl',
-    metric='bbox')
+    ann_file=f'{data_root}nuscenes_infos_val.pkl',
+    metric='bbox',
+)
 
 test_evaluator = val_evaluator
 

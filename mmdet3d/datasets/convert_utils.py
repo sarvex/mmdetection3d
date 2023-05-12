@@ -155,7 +155,7 @@ def get_nuscenes_2d_boxes(nusc: NuScenes, sample_data_token: str,
             c2e_r_mat = Quaternion(cs_rec['rotation']).rotation_matrix
             cam_velo3d = global_velo3d @ np.linalg.inv(
                 e2g_r_mat).T @ np.linalg.inv(c2e_r_mat).T
-            velo = cam_velo3d[0::2].tolist()
+            velo = cam_velo3d[::2].tolist()
 
             repro_rec['bbox_3d'] = loc + dim + rot
             repro_rec['velocity'] = velo
@@ -235,9 +235,7 @@ def get_kitti_style_2d_boxes(info: dict,
     # convert dict of list to list of dict
     ann_recs = []
     for i in range(len(ann_dicts['occluded'])):
-        ann_rec = {}
-        for k in ann_dicts.keys():
-            ann_rec[k] = ann_dicts[k][i]
+        ann_rec = {k: ann_dicts[k][i] for k in ann_dicts.keys()}
         ann_recs.append(ann_rec)
 
     for ann_idx, ann_rec in enumerate(ann_recs):
@@ -358,8 +356,7 @@ def post_process_coords(
 
     if polygon_from_2d_box.intersects(img_canvas):
         img_intersection = polygon_from_2d_box.intersection(img_canvas)
-        intersection_coords = np.array(
-            [coord for coord in img_intersection.exterior.coords])
+        intersection_coords = np.array(list(img_intersection.exterior.coords))
 
         min_x = min(intersection_coords[:, 0])
         min_y = min(intersection_coords[:, 1])
@@ -397,9 +394,8 @@ def generate_record(ann_rec: dict, x1: float, y1: float, x2: float, y2: float,
         cat_name = ann_rec['category_name']
         if cat_name not in NuScenesNameMapping:
             return None
-        else:
-            cat_name = NuScenesNameMapping[cat_name]
-            categories = nus_categories
+        cat_name = NuScenesNameMapping[cat_name]
+        categories = nus_categories
     else:
         if dataset == 'kitti':
             categories = kitti_categories
@@ -412,8 +408,7 @@ def generate_record(ann_rec: dict, x1: float, y1: float, x2: float, y2: float,
         if cat_name not in categories:
             return None
 
-    rec = dict()
-    rec['bbox_label'] = categories.index(cat_name)
+    rec = {'bbox_label': categories.index(cat_name)}
     rec['bbox_label_3d'] = rec['bbox_label']
     rec['bbox'] = [x1, y1, x2, y2]
     rec['bbox_3d_isvalid'] = True

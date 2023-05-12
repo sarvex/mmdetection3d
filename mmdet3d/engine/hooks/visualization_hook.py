@@ -99,7 +99,7 @@ class Det3DVisualizationHook(Hook):
         # is visualized for each evaluation.
         total_curr_iter = runner.iter + batch_idx
 
-        data_input = dict()
+        data_input = {}
 
         # Visualize only the first data
         if 'img_path' in outputs[0]:
@@ -152,7 +152,7 @@ class Det3DVisualizationHook(Hook):
         for data_sample in outputs:
             self._test_index += 1
 
-            data_input = dict()
+            data_input = {}
             if 'img_path' in data_sample:
                 img_path = data_sample.img_path
                 img_bytes = self.file_client.get(img_path)

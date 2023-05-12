@@ -77,7 +77,7 @@ def process_checkpoint(in_file, out_file):
     # add the code here.
     torch.save(checkpoint, out_file)
     sha = subprocess.check_output(['sha256sum', out_file]).decode()
-    final_file = out_file.rstrip('.pth') + '-{}.pth'.format(sha[:8])
+    final_file = out_file.rstrip('.pth') + f'-{sha[:8]}.pth'
     subprocess.Popen(['mv', out_file, final_file])
     return final_file
 
@@ -94,10 +94,10 @@ def get_final_epoch(config):
 
 def get_best_results(log_json_path):
     dataset = get_model_dataset(log_json_path)
-    max_dict = dict()
+    max_dict = {}
     max_memory = 0
     with open(log_json_path, 'r') as f:
-        for line in f.readlines():
+        for line in f:
             log_line = json.loads(line)
             if 'mode' not in log_line.keys():
                 continue
@@ -116,8 +116,8 @@ def get_best_results(log_json_path):
                     max_dict = result_dict
                     max_dict['epoch'] = log_line['epoch']
                 elif all(
-                    [max_dict[key] <= result_dict[key]
-                     for key in result_dict]):
+                    max_dict[key] <= result_dict[key] for key in result_dict
+                ):
                     max_dict.update(result_dict)
                     max_dict['epoch'] = log_line['epoch']
 
@@ -134,8 +134,7 @@ def parse_args():
     parser.add_argument(
         'out', type=str, help='output path of gathered models to be stored')
 
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def main():
@@ -147,11 +146,11 @@ def main():
     # find all models in the root directory to be gathered
     raw_configs = list(mmengine.scandir('./configs', '.py', recursive=True))
 
-    # filter configs that is not trained in the experiments dir
-    used_configs = []
-    for raw_config in raw_configs:
-        if osp.exists(osp.join(models_root, raw_config)):
-            used_configs.append(raw_config)
+    used_configs = [
+        raw_config
+        for raw_config in raw_configs
+        if osp.exists(osp.join(models_root, raw_config))
+    ]
     print(f'Find {len(used_configs)} models to be gathered')
 
     # find final_ckpt and log file for trained each config
@@ -163,7 +162,7 @@ def main():
         log_txt_path = glob.glob(osp.join(models_root, '*.log'))[0]
         model_performance = get_best_results(log_json_path)
         final_epoch = model_performance['epoch']
-        final_model = 'epoch_{}.pth'.format(final_epoch)
+        final_model = f'epoch_{final_epoch}.pth'
         model_path = osp.join(models_root, final_model)
 
         # skip if the model is still training
@@ -193,8 +192,7 @@ def main():
         model_name = model['config'].split('/')[-1].rstrip(
             '.py') + '_' + model['model_time']
         publish_model_path = osp.join(model_publish_dir, model_name)
-        trained_model_path = osp.join(models_root,
-                                      'epoch_{}.pth'.format(model['epochs']))
+        trained_model_path = osp.join(models_root, f"epoch_{model['epochs']}.pth")
 
         # convert model
         final_model_path = process_checkpoint(trained_model_path,

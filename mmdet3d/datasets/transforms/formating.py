@@ -81,9 +81,7 @@ class Pack3DDetInputs(BaseTransform):
         self.meta_keys = meta_keys
 
     def _remove_prefix(self, key: str) -> str:
-        if key.startswith('gt_'):
-            key = key[3:]
-        return key
+        return key.removeprefix('gt_')
 
     def transform(self, results: Union[dict,
                                        List[dict]]) -> Union[dict, List[dict]]:
@@ -110,11 +108,7 @@ class Pack3DDetInputs(BaseTransform):
             if len(results) == 1:
                 # simple test
                 return self.pack_single_results(results[0])
-            pack_results = []
-            for single_result in results:
-                pack_results.append(self.pack_single_results(single_result))
-            return pack_results
-        # norm training and simple testing
+            return [self.pack_single_results(single_result) for single_result in results]
         elif isinstance(results, dict):
             return self.pack_single_results(results)
         else:
@@ -140,9 +134,8 @@ class Pack3DDetInputs(BaseTransform):
               of the sample.
         """
         # Format 3D data
-        if 'points' in results:
-            if isinstance(results['points'], BasePoints):
-                results['points'] = results['points'].tensor
+        if 'points' in results and isinstance(results['points'], BasePoints):
+            results['points'] = results['points'].tensor
 
         if 'img' in results:
             if isinstance(results['img'], list):
@@ -168,9 +161,10 @@ class Pack3DDetInputs(BaseTransform):
                 results[key] = [to_tensor(res) for res in results[key]]
             else:
                 results[key] = to_tensor(results[key])
-        if 'gt_bboxes_3d' in results:
-            if not isinstance(results['gt_bboxes_3d'], BaseInstance3DBoxes):
-                results['gt_bboxes_3d'] = to_tensor(results['gt_bboxes_3d'])
+        if 'gt_bboxes_3d' in results and not isinstance(
+            results['gt_bboxes_3d'], BaseInstance3DBoxes
+        ):
+            results['gt_bboxes_3d'] = to_tensor(results['gt_bboxes_3d'])
 
         if 'gt_semantic_seg' in results:
             results['gt_semantic_seg'] = to_tensor(
@@ -183,10 +177,7 @@ class Pack3DDetInputs(BaseTransform):
         gt_instances = InstanceData()
         gt_pts_seg = PointData()
 
-        img_metas = {}
-        for key in self.meta_keys:
-            if key in results:
-                img_metas[key] = results[key]
+        img_metas = {key: results[key] for key in self.meta_keys if key in results}
         data_sample.set_metainfo(img_metas)
 
         inputs = {}
@@ -212,16 +203,8 @@ class Pack3DDetInputs(BaseTransform):
         data_sample.gt_instances_3d = gt_instances_3d
         data_sample.gt_instances = gt_instances
         data_sample.gt_pts_seg = gt_pts_seg
-        if 'eval_ann_info' in results:
-            data_sample.eval_ann_info = results['eval_ann_info']
-        else:
-            data_sample.eval_ann_info = None
-
-        packed_results = dict()
-        packed_results['data_samples'] = data_sample
-        packed_results['inputs'] = inputs
-
-        return packed_results
+        data_sample.eval_ann_info = results.get('eval_ann_info', None)
+        return {'data_samples': data_sample, 'inputs': inputs}
 
     def __repr__(self) -> str:
         """str: Return a string that describes the module."""

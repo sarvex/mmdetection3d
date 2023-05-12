@@ -111,7 +111,6 @@ def lyft_eval(lyft, data_root, res_path, eval_set, output_dir, logger=None):
     print('Calculating mAP@0.5:0.95...')
 
     iou_thresholds = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
-    metrics = {}
     average_precisions = \
         get_classwise_aps(gts, predictions, class_names, iou_thresholds)
     APs_data = [['IOU', 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]]
@@ -120,7 +119,7 @@ def lyft_eval(lyft, data_root, res_path, eval_set, output_dir, logger=None):
     mAPs_cate = np.mean(average_precisions, axis=1)
     final_mAP = np.mean(mAPs)
 
-    metrics['average_precisions'] = average_precisions.tolist()
+    metrics = {'average_precisions': average_precisions.tolist()}
     metrics['mAPs'] = mAPs.tolist()
     metrics['Final mAP'] = float(final_mAP)
     metrics['class_names'] = class_names
@@ -180,7 +179,7 @@ def get_classwise_aps(gt, predictions, class_names, iou_thresholds):
     Returns:
         np.ndarray: an array with an average precision per class.
     """
-    assert all([0 <= iou_th <= 1 for iou_th in iou_thresholds])
+    assert all(0 <= iou_th <= 1 for iou_th in iou_thresholds)
 
     gt_by_class_name = group_by_key(gt, 'name')
     pred_by_class_name = group_by_key(predictions, 'name')
@@ -253,15 +252,11 @@ def get_single_class_aps(gt, predictions, iou_thresholds):
             jmax = np.argmax(overlaps)
 
         for i, iou_threshold in enumerate(iou_thresholds):
-            if max_overlap > iou_threshold:
-                if gt_checked[jmax, i] == 0:
-                    tps[prediction_index, i] = 1.0
-                    gt_checked[jmax, i] = 1
-                else:
-                    fps[prediction_index, i] = 1.0
+            if max_overlap > iou_threshold and gt_checked[jmax, i] == 0:
+                tps[prediction_index, i] = 1.0
+                gt_checked[jmax, i] = 1
             else:
                 fps[prediction_index, i] = 1.0
-
     # compute precision recall
     fps = np.cumsum(fps, axis=0)
     tps = np.cumsum(tps, axis=0)
@@ -275,8 +270,8 @@ def get_single_class_aps(gt, predictions, iou_thresholds):
     for i in range(len(iou_thresholds)):
         recall = recalls[:, i]
         precision = precisions[:, i]
-        assert np.all(0 <= recall) & np.all(recall <= 1)
-        assert np.all(0 <= precision) & np.all(precision <= 1)
+        assert np.all(recall >= 0) & np.all(recall <= 1)
+        assert np.all(precision >= 0) & np.all(precision <= 1)
         ap = get_ap(recall, precision)
         aps.append(ap)
 

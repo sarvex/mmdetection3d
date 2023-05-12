@@ -77,27 +77,31 @@ data = dict(
     train=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file=data_root + 'lyft_infos_train.pkl',
+        ann_file=f'{data_root}lyft_infos_train.pkl',
         pipeline=train_pipeline,
         classes=class_names,
         modality=input_modality,
-        test_mode=False),
+        test_mode=False,
+    ),
     val=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file=data_root + 'lyft_infos_val.pkl',
+        ann_file=f'{data_root}lyft_infos_val.pkl',
         pipeline=test_pipeline,
         classes=class_names,
         modality=input_modality,
-        test_mode=True),
+        test_mode=True,
+    ),
     test=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file=data_root + 'lyft_infos_test.pkl',
+        ann_file=f'{data_root}lyft_infos_test.pkl',
         pipeline=test_pipeline,
         classes=class_names,
         modality=input_modality,
-        test_mode=True))
+        test_mode=True,
+    ),
+)
 # For Lyft dataset, we usually evaluate the model at the end of training.
 # Since the models are trained by 24 epochs by default, we set evaluation
 # interval to be 24. Please change the interval accordingly if you do not

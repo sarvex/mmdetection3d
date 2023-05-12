@@ -39,13 +39,13 @@ class Instance:
             self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
 
     def to_dict(self):
-        dict = {}
-        dict['instance_id'] = self.instance_id
-        dict['label_id'] = self.label_id
-        dict['vert_count'] = self.vert_count
-        dict['med_dist'] = self.med_dist
-        dict['dist_conf'] = self.dist_conf
-        return dict
+        return {
+            'instance_id': self.instance_id,
+            'label_id': self.label_id,
+            'vert_count': self.vert_count,
+            'med_dist': self.med_dist,
+            'dist_conf': self.dist_conf,
+        }
 
     def from_json(self, data):
         self.instance_id = int(data['instance_id'])
@@ -56,7 +56,7 @@ class Instance:
             self.dist_conf = float(data['dist_conf'])
 
     def __str__(self):
-        return '(' + str(self.instance_id) + ')'
+        return f'({str(self.instance_id)})'
 
 
 def get_instances(ids, class_ids, class_labels, id2label):
@@ -71,9 +71,7 @@ def get_instances(ids, class_ids, class_labels, id2label):
     Returns:
         dict [str, list]: Instance objects grouped by class label.
     """
-    instances = {}
-    for label in class_labels:
-        instances[label] = []
+    instances = {label: [] for label in class_labels}
     instance_ids = np.unique(ids)
     for id in instance_ids:
         if id == 0:

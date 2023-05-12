@@ -52,16 +52,17 @@ def make_cuda_ext(name,
         ]
         sources += sources_cuda
     else:
-        print('Compiling {} without CUDA'.format(name))
+        print(f'Compiling {name} without CUDA')
         extension = CppExtension
-        # raise EnvironmentError('CUDA is required to compile MMDetection!')
+            # raise EnvironmentError('CUDA is required to compile MMDetection!')
 
     return extension(
-        name='{}.{}'.format(module, name),
+        name=f'{module}.{name}',
         sources=[os.path.join(*module.split('.'), p) for p in sources],
         include_dirs=extra_include_path,
         define_macros=define_macros,
-        extra_compile_args=extra_compile_args)
+        extra_compile_args=extra_compile_args,
+    )
 
 
 def parse_requirements(fname='requirements.txt', with_version=True):
@@ -88,8 +89,7 @@ def parse_requirements(fname='requirements.txt', with_version=True):
         if line.startswith('-r '):
             # Allow specifying requirements in other files
             target = line.split(' ')[1]
-            for info in parse_require_file(target):
-                yield info
+            yield from parse_require_file(target)
         else:
             info = {'line': line}
             if line.startswith('-e '):
@@ -116,25 +116,24 @@ def parse_requirements(fname='requirements.txt', with_version=True):
 
     def parse_require_file(fpath):
         with open(fpath, 'r') as f:
-            for line in f.readlines():
+            for line in f:
                 line = line.strip()
                 if line and not line.startswith('#'):
-                    for info in parse_line(line):
-                        yield info
+                    yield from parse_line(line)
 
     def gen_packages_items():
-        if exists(require_fpath):
-            for info in parse_require_file(require_fpath):
-                parts = [info['package']]
-                if with_version and 'version' in info:
-                    parts.extend(info['version'])
-                if not sys.version.startswith('3.4'):
-                    # apparently package_deps are broken in 3.4
-                    platform_deps = info.get('platform_deps')
-                    if platform_deps is not None:
-                        parts.append(';' + platform_deps)
-                item = ''.join(parts)
-                yield item
+        if not exists(require_fpath):
+            return
+        for info in parse_require_file(require_fpath):
+            parts = [info['package']]
+            if with_version and 'version' in info:
+                parts.extend(info['version'])
+            if not sys.version.startswith('3.4'):
+                # apparently package_deps are broken in 3.4
+                platform_deps = info.get('platform_deps')
+                if platform_deps is not None:
+                    parts.append(f';{platform_deps}')
+            yield ''.join(parts)
 
     packages = list(gen_packages_items())
     return packages
@@ -151,11 +150,7 @@ def add_mim_extention():
     # parse installment mode
     if 'develop' in sys.argv:
         # installed by `pip install -e .`
-        if platform.system() == 'Windows':
-            # set `copy` mode here since symlink fails on Windows.
-            mode = 'copy'
-        else:
-            mode = 'symlink'
+        mode = 'copy' if platform.system() == 'Windows' else 'symlink'
     elif 'sdist' in sys.argv or 'bdist_wheel' in sys.argv:
         # installed by `pip install .`
         # or create source distribution by `python setup.py sdist`

@@ -117,13 +117,11 @@ val_dataloader = dict(
         box_type_3d='LiDAR'))
 
 val_evaluator = dict(
-    type='LyftMetric',
-    ann_file=data_root + 'lyft_infos_val.pkl',
-    metric='bbox')
+    type='LyftMetric', ann_file=f'{data_root}lyft_infos_val.pkl', metric='bbox'
+)
 test_evaluator = dict(
-    type='LyftMetric',
-    ann_file=data_root + 'lyft_infos_val.pkl',
-    metric='bbox')
+    type='LyftMetric', ann_file=f'{data_root}lyft_infos_val.pkl', metric='bbox'
+)
 
 vis_backends = [dict(type='LocalVisBackend')]
 visualizer = dict(

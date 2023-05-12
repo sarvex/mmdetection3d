@@ -68,7 +68,7 @@ class Prediction2Waymo(object):
         self.waymo_results_final_path = waymo_results_final_path
         self.prefix = prefix
         self.classes = classes
-        self.workers = int(workers)
+        self.workers = workers
         self.file_client_args = file_client_args
         self.from_kitti_format = from_kitti_format
         if idx2metainfo is not None:
@@ -118,12 +118,12 @@ class Prediction2Waymo(object):
             for path in self.file_client_args['path_mapping'].keys():
                 if path in self.waymo_tfrecords_dir:
                     self.waymo_tfrecords_dir = \
-                        self.waymo_tfrecords_dir.replace(
+                            self.waymo_tfrecords_dir.replace(
                             path, self.file_client_args['path_mapping'][path])
             from petrel_client.client import Client
             client = Client()
             contents = client.list(self.waymo_tfrecords_dir)
-            self.waymo_tfrecord_pathnames = list()
+            self.waymo_tfrecord_pathnames = []
             for content in sorted(list(contents)):
                 if content.endswith('tfrecord'):
                     self.waymo_tfrecord_pathnames.append(

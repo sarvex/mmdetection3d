@@ -33,15 +33,14 @@ revise_file = osp.join(args.data_dir,
 with open(revise_file, 'r') as f:
     data = f.read()
     # replace that extra character with blank space to separate data
-    data = data[:5545347] + ' ' + data[5545348:]
+    data = f'{data[:5545347]} {data[5545348:]}'
 with open(revise_file, 'w') as f:
     f.write(data)
 
 for anno_path in anno_paths:
     print(f'Exporting data from annotation file: {anno_path}')
     elements = anno_path.split('/')
-    out_filename = \
-        elements[-3] + '_' + elements[-2]  # Area_1_hallway_1
+    out_filename = f'{elements[-3]}_{elements[-2]}'
     out_filename = osp.join(output_folder, out_filename)
     if osp.isfile(f'{out_filename}_point.npy'):
         print('File already exists. skipping.')

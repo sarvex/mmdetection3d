@@ -105,15 +105,17 @@ def export(mesh_file,
 
     # Load scene axis alignment matrix
     lines = open(meta_file).readlines()
-    # test set data doesn't have align_matrix
-    axis_align_matrix = np.eye(4)
-    for line in lines:
-        if 'axisAlignment' in line:
-            axis_align_matrix = [
+    axis_align_matrix = next(
+        (
+            [
                 float(x)
                 for x in line.rstrip().strip('axisAlignment = ').split(' ')
             ]
-            break
+            for line in lines
+            if 'axisAlignment' in line
+        ),
+        np.eye(4),
+    )
     axis_align_matrix = np.array(axis_align_matrix).reshape((4, 4))
 
     # perform global alignment of mesh vertices
@@ -154,13 +156,13 @@ def export(mesh_file,
         object_id_to_label_id = None
 
     if output_file is not None:
-        np.save(output_file + '_vert.npy', mesh_vertices)
+        np.save(f'{output_file}_vert.npy', mesh_vertices)
         if not test_mode:
-            np.save(output_file + '_sem_label.npy', label_ids)
-            np.save(output_file + '_ins_label.npy', instance_ids)
-            np.save(output_file + '_unaligned_bbox.npy', unaligned_bboxes)
-            np.save(output_file + '_aligned_bbox.npy', aligned_bboxes)
-            np.save(output_file + '_axis_align_matrix.npy', axis_align_matrix)
+            np.save(f'{output_file}_sem_label.npy', label_ids)
+            np.save(f'{output_file}_ins_label.npy', instance_ids)
+            np.save(f'{output_file}_unaligned_bbox.npy', unaligned_bboxes)
+            np.save(f'{output_file}_aligned_bbox.npy', aligned_bboxes)
+            np.save(f'{output_file}_axis_align_matrix.npy', axis_align_matrix)
 
     return mesh_vertices, label_ids, instance_ids, unaligned_bboxes, \
         aligned_bboxes, object_id_to_label_id, axis_align_matrix
@@ -180,10 +182,11 @@ def main():
     opt = parser.parse_args()
 
     scan_name = os.path.split(opt.scan_path)[-1]
-    mesh_file = os.path.join(opt.scan_path, scan_name + '_vh_clean_2.ply')
-    agg_file = os.path.join(opt.scan_path, scan_name + '.aggregation.json')
-    seg_file = os.path.join(opt.scan_path,
-                            scan_name + '_vh_clean_2.0.010000.segs.json')
+    mesh_file = os.path.join(opt.scan_path, f'{scan_name}_vh_clean_2.ply')
+    agg_file = os.path.join(opt.scan_path, f'{scan_name}.aggregation.json')
+    seg_file = os.path.join(
+        opt.scan_path, f'{scan_name}_vh_clean_2.0.010000.segs.json'
+    )
     meta_file = os.path.join(
         opt.scan_path, scan_name +
         '.txt')  # includes axisAlignment info for the train set scans.

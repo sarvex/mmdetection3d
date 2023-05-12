@@ -58,12 +58,10 @@ class SegMetric(BaseMetric):
         for data_sample in data_samples:
             pred_3d = data_sample['pred_pts_seg']
             eval_ann_info = data_sample['eval_ann_info']
-            cpu_pred_3d = dict()
-            for k, v in pred_3d.items():
-                if hasattr(v, 'to'):
-                    cpu_pred_3d[k] = v.to('cpu').numpy()
-                else:
-                    cpu_pred_3d[k] = v
+            cpu_pred_3d = {
+                k: v.to('cpu').numpy() if hasattr(v, 'to') else v
+                for k, v in pred_3d.items()
+            }
             self.results.append((eval_ann_info, cpu_pred_3d))
 
     def format_results(self, results):
@@ -93,7 +91,7 @@ class SegMetric(BaseMetric):
             if output_idx != ignore_index:
                 cat2label[output_idx] = original_label
 
-        for i, (eval_ann, result) in enumerate(results):
+        for eval_ann, result in results:
             sample_idx = eval_ann['point_cloud']['lidar_idx']
             pred_sem_mask = result['semantic_mask'].numpy().astype(np.int)
             pred_label = cat2label[pred_sem_mask]
@@ -127,11 +125,10 @@ class SegMetric(BaseMetric):
             pred_semantic_masks.append(
                 sinlge_pred_results['pts_semantic_mask'])
 
-        ret_dict = seg_eval(
+        return seg_eval(
             gt_semantic_masks,
             pred_semantic_masks,
             label2cat,
             ignore_index,
-            logger=logger)
-
-        return ret_dict
+            logger=logger,
+        )

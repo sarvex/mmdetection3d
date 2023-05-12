@@ -132,7 +132,7 @@ class SUNRGBDDataset(Det3DDataset):
         ann_info = super().parse_ann_info(info)
         # process data without any annotations
         if ann_info is None:
-            ann_info = dict()
+            ann_info = {}
             ann_info['gt_bboxes_3d'] = np.zeros((0, 6), dtype=np.float32)
             ann_info['gt_labels_3d'] = np.zeros((0, ), dtype=np.int64)
         # to target box structure

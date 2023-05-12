@@ -23,13 +23,12 @@ def aggregate_predictions(masks, labels, scores, valid_class_ids):
         mask = mask.clone().numpy()
         label = label.clone().numpy()
         score = score.clone().numpy()
-        info = dict()
+        info = {}
         n_instances = mask.max() + 1
         for i in range(n_instances):
             # match pred_instance['filename'] from assign_instances_for_scan
             file_name = f'{id}_{i}'
-            info[file_name] = dict()
-            info[file_name]['mask'] = (mask == i).astype(np.int)
+            info[file_name] = {'mask': (mask == i).astype(np.int)}
             info[file_name]['label_id'] = valid_class_ids[label[i]]
             info[file_name]['conf'] = score[i]
         infos.append(info)

@@ -90,7 +90,7 @@ class LoadMultiViewImageFromFiles(BaseTransform):
                 else:
                     choices = np.random.choice(
                         num_frames, self.num_ref_frames, replace=False) + 1
-            elif num_frames > 0 and num_frames < self.num_ref_frames:
+            elif num_frames > 0:
                 if self.test_mode:
                     base_choices = np.arange(num_frames) + 1
                     random_choices = np.random.choice(
@@ -122,9 +122,7 @@ class LoadMultiViewImageFromFiles(BaseTransform):
                     results[key] = select_results
             for key in ['ego2global']:
                 if key in results:
-                    select_results = []
-                    for choice in choices:
-                        select_results += [results[key][choice]]
+                    select_results = [results[key][choice] for choice in choices]
                     results[key] = select_results
             # Transform lidar2cam to
             # [cur_lidar]2[prev_img] and [cur_lidar]2[prev_cam]
@@ -148,7 +146,7 @@ class LoadMultiViewImageFromFiles(BaseTransform):
                                                 (choice_idx + 1) *
                                                 self.num_views):
                             results[key][result_idx] = \
-                                results[key][result_idx].dot(cur2prev)
+                                    results[key][result_idx].dot(cur2prev)
         # Support multi-view images with different shapes
         # TODO: record the origin shape and padded shape
         filename, cam2img, lidar2cam = [], [], []
@@ -368,14 +366,7 @@ class LoadPointsFromMultiSweeps(BaseTransform):
         points.tensor[:, 4] = 0
         sweep_points_list = [points]
         ts = results['timestamp']
-        if 'lidar_sweeps' not in results:
-            if self.pad_empty_sweeps:
-                for i in range(self.sweeps_num):
-                    if self.remove_close:
-                        sweep_points_list.append(self._remove_close(points))
-                    else:
-                        sweep_points_list.append(points)
-        else:
+        if 'lidar_sweeps' in results:
             if len(results['lidar_sweeps']) <= self.sweeps_num:
                 choices = np.arange(len(results['lidar_sweeps']))
             elif self.test_mode:
@@ -402,6 +393,12 @@ class LoadPointsFromMultiSweeps(BaseTransform):
                 points_sweep = points.new_point(points_sweep)
                 sweep_points_list.append(points_sweep)
 
+        elif self.pad_empty_sweeps:
+            for _ in range(self.sweeps_num):
+                if self.remove_close:
+                    sweep_points_list.append(self._remove_close(points))
+                else:
+                    sweep_points_list.append(points)
         points = points.cat(sweep_points_list)
         points = points[:, self.use_dim]
         results['points'] = points
@@ -460,8 +457,7 @@ class PointSegClassMapping(BaseTransform):
 
     def __repr__(self) -> str:
         """str: Return a string that describes the module."""
-        repr_str = self.__class__.__name__
-        return repr_str
+        return self.__class__.__name__
 
 
 @TRANSFORMS.register_module()
@@ -554,8 +550,8 @@ class LoadPointsFromFile(BaseTransform):
         if isinstance(use_dim, int):
             use_dim = list(range(use_dim))
         assert max(use_dim) < load_dim, \
-            f'Expect all used dimensions < {load_dim}, got {use_dim}'
-        assert coord_type in ['CAMERA', 'LIDAR', 'DEPTH']
+                f'Expect all used dimensions < {load_dim}, got {use_dim}'
+        assert coord_type in {'CAMERA', 'LIDAR', 'DEPTH'}
 
         self.coord_type = coord_type
         self.load_dim = load_dim
@@ -605,7 +601,7 @@ class LoadPointsFromFile(BaseTransform):
         points = points[:, self.use_dim]
         if self.norm_intensity:
             assert len(self.use_dim) >= 4, \
-                f'When using intensity norm, expect used dimensions >= 4, got {len(self.use_dim)}'  # noqa: E501
+                    f'When using intensity norm, expect used dimensions >= 4, got {len(self.use_dim)}'  # noqa: E501
             points[:, 3] = np.tanh(points[:, 3])
         attribute_dims = None
 
@@ -620,7 +616,7 @@ class LoadPointsFromFile(BaseTransform):
         if self.use_color:
             assert len(self.use_dim) >= 6
             if attribute_dims is None:
-                attribute_dims = dict()
+                attribute_dims = {}
             attribute_dims.update(
                 dict(color=[
                     points.shape[1] - 3,
@@ -637,7 +633,7 @@ class LoadPointsFromFile(BaseTransform):
 
     def __repr__(self) -> str:
         """str: Return a string that describes the module."""
-        repr_str = self.__class__.__name__ + '('
+        repr_str = f'{self.__class__.__name__}('
         repr_str += f'shift_height={self.shift_height}, '
         repr_str += f'use_color={self.use_color}, '
         repr_str += f'file_client_args={self.file_client_args}, '

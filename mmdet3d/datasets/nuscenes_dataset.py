@@ -82,11 +82,10 @@ class NuScenesDataset(Det3DDataset):
         self.with_velocity = with_velocity
 
         # TODO: Redesign multi-view data process in the future
-        assert load_type in ('frame_based', 'mv_image_based',
-                             'fov_image_based')
+        assert load_type in {'frame_based', 'mv_image_based', 'fov_image_based'}
         self.load_type = load_type
 
-        assert box_type_3d.lower() in ('lidar', 'camera')
+        assert box_type_3d.lower() in {'lidar', 'camera'}
         super().__init__(
             data_root=data_root,
             ann_file=ann_file,
@@ -111,7 +110,7 @@ class NuScenesDataset(Det3DDataset):
             filter_mask = ann_info['bbox_3d_isvalid']
         else:
             filter_mask = ann_info['num_lidar_pts'] > 0
-        for key in ann_info.keys():
+        for key in ann_info:
             if key != 'instances':
                 filtered_annotations[key] = (ann_info[key][filter_mask])
             else:
@@ -146,7 +145,7 @@ class NuScenesDataset(Det3DDataset):
                 ann_info['gt_bboxes_3d'] = gt_bboxes_3d
         else:
             # empty instance
-            ann_info = dict()
+            ann_info = {}
             if self.with_velocity:
                 ann_info['gt_bboxes_3d'] = np.zeros((0, 9), dtype=np.float32)
             else:
@@ -191,46 +190,43 @@ class NuScenesDataset(Det3DDataset):
             List[dict] or dict: Has `ann_info` in training stage. And
             all path has been converted to absolute path.
         """
-        if self.load_type == 'mv_image_based':
-            data_list = []
-            if self.modality['use_lidar']:
-                info['lidar_points']['lidar_path'] = \
+        if self.load_type != 'mv_image_based':
+            return super().parse_data_info(info)
+        data_list = []
+        if self.modality['use_lidar']:
+            info['lidar_points']['lidar_path'] = \
                     osp.join(
-                        self.data_prefix.get('pts', ''),
-                        info['lidar_points']['lidar_path'])
+                    self.data_prefix.get('pts', ''),
+                    info['lidar_points']['lidar_path'])
 
-            if self.modality['use_camera']:
-                for cam_id, img_info in info['images'].items():
-                    if 'img_path' in img_info:
-                        if cam_id in self.data_prefix:
-                            cam_prefix = self.data_prefix[cam_id]
-                        else:
-                            cam_prefix = self.data_prefix.get('img', '')
-                        img_info['img_path'] = osp.join(
-                            cam_prefix, img_info['img_path'])
+        if self.modality['use_camera']:
+            for cam_id, img_info in info['images'].items():
+                if 'img_path' in img_info:
+                    if cam_id in self.data_prefix:
+                        cam_prefix = self.data_prefix[cam_id]
+                    else:
+                        cam_prefix = self.data_prefix.get('img', '')
+                    img_info['img_path'] = osp.join(
+                        cam_prefix, img_info['img_path'])
 
-            for idx, (cam_id, img_info) in enumerate(info['images'].items()):
-                camera_info = dict()
-                camera_info['images'] = dict()
-                camera_info['images'][cam_id] = img_info
-                if 'cam_instances' in info and cam_id in info['cam_instances']:
-                    camera_info['instances'] = info['cam_instances'][cam_id]
-                else:
-                    camera_info['instances'] = []
-                # TODO: check whether to change sample_idx for 6 cameras
-                #  in one frame
-                camera_info['sample_idx'] = info['sample_idx'] * 6 + idx
-                camera_info['token'] = info['token']
-                camera_info['ego2global'] = info['ego2global']
+        for idx, (cam_id, img_info) in enumerate(info['images'].items()):
+            camera_info = {'images': {}}
+            camera_info['images'][cam_id] = img_info
+            if 'cam_instances' in info and cam_id in info['cam_instances']:
+                camera_info['instances'] = info['cam_instances'][cam_id]
+            else:
+                camera_info['instances'] = []
+            # TODO: check whether to change sample_idx for 6 cameras
+            #  in one frame
+            camera_info['sample_idx'] = info['sample_idx'] * 6 + idx
+            camera_info['token'] = info['token']
+            camera_info['ego2global'] = info['ego2global']
 
-                if not self.test_mode:
-                    # used in traing
-                    camera_info['ann_info'] = self.parse_ann_info(camera_info)
-                if self.test_mode and self.load_eval_anns:
-                    camera_info['eval_ann_info'] = \
+            if not self.test_mode:
+                # used in traing
+                camera_info['ann_info'] = self.parse_ann_info(camera_info)
+            if self.test_mode and self.load_eval_anns:
+                camera_info['eval_ann_info'] = \
                         self.parse_ann_info(camera_info)
-                data_list.append(camera_info)
-            return data_list
-        else:
-            data_info = super().parse_data_info(info)
-            return data_info
+            data_list.append(camera_info)
+        return data_list

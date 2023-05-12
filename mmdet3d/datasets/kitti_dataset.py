@@ -71,8 +71,7 @@ class KittiDataset(Det3DDataset):
                  **kwargs) -> None:
 
         self.pcd_limit_range = pcd_limit_range
-        assert load_type in ('frame_based', 'mv_image_based',
-                             'fov_image_based')
+        assert load_type in {'frame_based', 'mv_image_based', 'fov_image_based'}
         self.load_type = load_type
         super().__init__(
             data_root=data_root,
@@ -85,7 +84,7 @@ class KittiDataset(Det3DDataset):
             test_mode=test_mode,
             **kwargs)
         assert self.modality is not None
-        assert box_type_3d.lower() in ('lidar', 'camera')
+        assert box_type_3d.lower() in {'lidar', 'camera'}
 
     def parse_data_info(self, info: dict) -> dict:
         """Process the raw data info.
@@ -149,7 +148,7 @@ class KittiDataset(Det3DDataset):
         """
         ann_info = super().parse_ann_info(info)
         if ann_info is None:
-            ann_info = dict()
+            ann_info = {}
             # empty instance
             ann_info['gt_bboxes_3d'] = np.zeros((0, 7), dtype=np.float32)
             ann_info['gt_labels_3d'] = np.zeros(0, dtype=np.int64)

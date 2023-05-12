@@ -33,5 +33,7 @@ train_pipeline = [
 ]
 data = dict(
     train=dict(
-        seg_prefix=data_root + 'annotations/semantic_masks/',
-        pipeline=train_pipeline))
+        seg_prefix=f'{data_root}annotations/semantic_masks/',
+        pipeline=train_pipeline,
+    )
+)

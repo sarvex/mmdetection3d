@@ -12,15 +12,18 @@ class_names = ['Pedestrian', 'Cyclist', 'Car']
 input_modality = dict(use_lidar=True, use_camera=False)
 db_sampler = dict(
     data_root=data_root,
-    info_path=data_root + 'kitti_dbinfos_train.pkl',
+    info_path=f'{data_root}kitti_dbinfos_train.pkl',
     rate=1.0,
     prepare=dict(
         filter_by_difficulty=[-1],
-        filter_by_min_points=dict(Car=5, Pedestrian=10, Cyclist=10)),
+        filter_by_min_points=dict(Car=5, Pedestrian=10, Cyclist=10),
+    ),
     classes=class_names,
     sample_groups=dict(Car=12, Pedestrian=6, Cyclist=6),
     points_loader=dict(
-        type='LoadPointsFromFile', coord_type='LIDAR', load_dim=4, use_dim=4))
+        type='LoadPointsFromFile', coord_type='LIDAR', load_dim=4, use_dim=4
+    ),
+)
 train_pipeline = [
     dict(type='LoadPointsFromFile', coord_type='LIDAR', load_dim=4, use_dim=4),
     dict(type='LoadAnnotations3D', with_bbox_3d=True, with_label_3d=True),
@@ -121,8 +124,9 @@ val_dataloader = dict(
         test_mode=True))
 val_evaluator = dict(
     type='KittiMetric',
-    ann_file=data_root + 'kitti_infos_val.pkl',
-    metric='bbox')
+    ann_file=f'{data_root}kitti_infos_val.pkl',
+    metric='bbox',
+)
 test_evaluator = val_evaluator
 # Part-A2 uses a different learning rate from what SECOND uses.
 optim_wrapper = dict(optimizer=dict(lr=0.001))

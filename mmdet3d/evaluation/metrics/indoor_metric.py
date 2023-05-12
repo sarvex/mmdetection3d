@@ -52,12 +52,10 @@ class IndoorMetric(BaseMetric):
         for data_sample in data_samples:
             pred_3d = data_sample['pred_instances_3d']
             eval_ann_info = data_sample['eval_ann_info']
-            cpu_pred_3d = dict()
-            for k, v in pred_3d.items():
-                if hasattr(v, 'to'):
-                    cpu_pred_3d[k] = v.to('cpu')
-                else:
-                    cpu_pred_3d[k] = v
+            cpu_pred_3d = {
+                k: v.to('cpu') if hasattr(v, 'to') else v
+                for k, v in pred_3d.items()
+            }
             self.results.append((eval_ann_info, cpu_pred_3d))
 
     def compute_metrics(self, results: list) -> Dict[str, float]:
@@ -82,15 +80,14 @@ class IndoorMetric(BaseMetric):
         box_type_3d, box_mode_3d = get_box_type(
             self.dataset_meta.get('box_type_3d', 'depth'))
 
-        ret_dict = indoor_eval(
+        return indoor_eval(
             ann_infos,
             pred_results,
             self.iou_thr,
             self.dataset_meta['classes'],
             logger=logger,
-            box_mode_3d=box_mode_3d)
-
-        return ret_dict
+            box_mode_3d=box_mode_3d,
+        )
 
 
 @METRICS.register_module()
@@ -163,8 +160,7 @@ class Indoor2DMetric(BaseMetric):
         logger: MMLogger = MMLogger.get_current_instance()
         annotations, preds = zip(*results)
         eval_results = OrderedDict()
-        iou_thr_2d = (self.iou_thr) if isinstance(self.iou_thr,
-                                                  float) else self.iou_thr
+        iou_thr_2d = self.iou_thr
         for iou_thr_2d_single in iou_thr_2d:
             mean_ap, _ = eval_map(
                 preds,
@@ -173,5 +169,5 @@ class Indoor2DMetric(BaseMetric):
                 iou_thr=iou_thr_2d_single,
                 dataset=self.dataset_meta['classes'],
                 logger=logger)
-            eval_results['mAP_' + str(iou_thr_2d_single)] = mean_ap
+            eval_results[f'mAP_{str(iou_thr_2d_single)}'] = mean_ap
         return eval_results

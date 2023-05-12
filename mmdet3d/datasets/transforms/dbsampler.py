@@ -118,7 +118,7 @@ class DataBaseSampler(object):
         self.prepare = prepare
         self.classes = classes
         self.cat2label = {name: i for i, name in enumerate(classes)}
-        self.label2cat = {i: name for i, name in enumerate(classes)}
+        self.label2cat = dict(enumerate(classes))
         self.points_loader = TRANSFORMS.build(points_loader)
         self.file_client = mmengine.FileClient(**file_client_args)
 
@@ -143,9 +143,9 @@ class DataBaseSampler(object):
         # load sample groups
         # TODO: more elegant way to load sample groups
         self.sample_groups = []
-        for name, num in sample_groups.items():
-            self.sample_groups.append({name: int(num)})
-
+        self.sample_groups.extend(
+            {name: int(num)} for name, num in sample_groups.items()
+        )
         self.group_db_infos = self.db_infos  # just use db_infos
         self.sample_classes = []
         self.sample_max_nums = []
@@ -169,13 +169,14 @@ class DataBaseSampler(object):
         Returns:
             dict: Info of database after filtering.
         """
-        new_db_infos = {}
-        for key, dinfos in db_infos.items():
-            new_db_infos[key] = [
-                info for info in dinfos
+        return {
+            key: [
+                info
+                for info in dinfos
                 if info['difficulty'] not in removed_difficulty
             ]
-        return new_db_infos
+            for key, dinfos in db_infos.items()
+        }
 
     @staticmethod
     def filter_by_min_points(db_infos: dict, min_gt_points_dict: dict) -> dict:
@@ -192,10 +193,11 @@ class DataBaseSampler(object):
         for name, min_num in min_gt_points_dict.items():
             min_num = int(min_num)
             if min_num > 0:
-                filtered_infos = []
-                for info in db_infos[name]:
-                    if info['num_points_in_gt'] >= min_num:
-                        filtered_infos.append(info)
+                filtered_infos = [
+                    info
+                    for info in db_infos[name]
+                    if info['num_points_in_gt'] >= min_num
+                ]
                 db_infos[name] = filtered_infos
         return db_infos
 
@@ -266,7 +268,6 @@ class DataBaseSampler(object):
 
             # num_sampled = len(sampled)
             s_points_list = []
-            count = 0
             for info in sampled:
                 file_path = os.path.join(
                     self.data_root,
@@ -274,8 +275,6 @@ class DataBaseSampler(object):
                 results = dict(lidar_points=dict(lidar_path=file_path))
                 s_points = self.points_loader(results)['points']
                 s_points.translate(info['box3d_lidar'][:3])
-
-                count += 1
 
                 s_points_list.append(s_points)
 

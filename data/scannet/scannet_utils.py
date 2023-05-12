@@ -34,7 +34,7 @@ def read_label_mapping(filename,
                        label_from='raw_category',
                        label_to='nyu40id'):
     assert os.path.isfile(filename)
-    mapping = dict()
+    mapping = {}
     with open(filename) as csvfile:
         reader = csv.DictReader(csvfile, delimiter='\t')
         for row in reader:

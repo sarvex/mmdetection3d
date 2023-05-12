@@ -52,8 +52,7 @@ def parse_args():
         action='store_true',
         help='Whether save full log in a file')
 
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 args = parse_args()
@@ -94,7 +93,7 @@ if args.mode == 'train':
                   f'config name):\n{config_path}')
             continue
 
-        gpu_num = int(match_obj.group(1))
+        gpu_num = int(match_obj[1])
         work_dir_name = config_path if args.long_work_dir else config_name
 
         script += f"echo '{config_path}' &\n"
@@ -108,8 +107,7 @@ if args.mode == 'train':
                   f'{config_path} \\\n'
         script += f'$CHECKPOINT_DIR/{work_dir_name} --cfg-options ' \
                   f'checkpoint_config.max_keep_ckpts=' \
-                  f'{args.max_keep_ckpts} \\\n' \
-
+                  f'{args.max_keep_ckpts} \\\n'
         # if output full log, redirect stdout and stderr to
         # another log file in work dir
         if args.full_log:
@@ -139,11 +137,7 @@ elif args.mode == 'test':
             'scannet_seg', 'scannet', 's3dis_seg', 'sunrgbd', 'kitti', 'nus',
             'lyft', 'waymo'
         }
-        eval_option = None
-        for task in tasks:
-            if task in config_name:
-                eval_option = task
-                break
+        eval_option = next((task for task in tasks if task in config_name), None)
         if eval_option is None:
             print(f'Invalid config path (invalid task):\n{config_path}')
             continue
@@ -159,8 +153,7 @@ elif args.mode == 'test':
                   f'CPUS_PER_TASK={args.cpus_per_task} ' \
                   f'./tools/slurm_test.sh $PARTITION {config_name} ' \
                   f'{config_path} \\\n'
-        script += f'$CHECKPOINT_DIR/{work_dir_name}/latest.pth ' \
-
+        script += f'$CHECKPOINT_DIR/{work_dir_name}/latest.pth '
         if eval_option in ['scannet_seg', 's3dis_seg']:
             script += '--eval mIoU \\\n'
         elif eval_option in ['scannet', 'sunrgbd', 'kitti', 'nus']:

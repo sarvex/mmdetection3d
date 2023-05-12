@@ -126,12 +126,11 @@ class NuScenesMetric(BaseMetric):
                 the model.
         """
         for data_sample in data_samples:
-            result = dict()
             pred_3d = data_sample['pred_instances_3d']
             pred_2d = data_sample['pred_instances']
             for attr_name in pred_3d:
                 pred_3d[attr_name] = pred_3d[attr_name].to('cpu')
-            result['pred_instances_3d'] = pred_3d
+            result = {'pred_instances_3d': pred_3d}
             for attr_name in pred_2d:
                 pred_2d[attr_name] = pred_2d[attr_name].to('cpu')
             result['pred_instances'] = pred_2d
@@ -189,12 +188,12 @@ class NuScenesMetric(BaseMetric):
         Returns:
             dict[str, float]: Results of each evaluation metric.
         """
-        metric_dict = dict()
+        metric_dict = {}
         for name in result_dict:
             print(f'Evaluating bboxes of {name}')
             ret_dict = self._evaluate_single(
                 result_dict[name], classes=classes, result_name=name)
-        metric_dict.update(ret_dict)
+        metric_dict |= ret_dict
         return metric_dict
 
     def _evaluate_single(self,
@@ -235,7 +234,7 @@ class NuScenesMetric(BaseMetric):
 
         # record metrics
         metrics = mmengine.load(osp.join(output_dir, 'metrics_summary.json'))
-        detail = dict()
+        detail = {}
         metric_prefix = f'{result_name}_NuScenes'
         for name in classes:
             for k, v in metrics['label_aps'][name].items():
@@ -280,7 +279,7 @@ class NuScenesMetric(BaseMetric):
             jsonfile_prefix = osp.join(tmp_dir.name, 'results')
         else:
             tmp_dir = None
-        result_dict = dict()
+        result_dict = {}
         sample_id_list = [result['sample_idx'] for result in results]
 
         for name in results[0]:
@@ -319,26 +318,35 @@ class NuScenesMetric(BaseMetric):
             'pedestrian.standing', 'pedestrian.sitting_lying_down',
             'vehicle.moving', 'vehicle.parked', 'vehicle.stopped', 'None'
         ]
-        if label_name == 'car' or label_name == 'bus' \
-            or label_name == 'truck' or label_name == 'trailer' \
-                or label_name == 'construction_vehicle':
-            if AttrMapping_rev2[attr_idx] == 'vehicle.moving' or \
-                AttrMapping_rev2[attr_idx] == 'vehicle.parked' or \
-                    AttrMapping_rev2[attr_idx] == 'vehicle.stopped':
+        if label_name in [
+            'car',
+            'bus',
+            'truck',
+            'trailer',
+            'construction_vehicle',
+        ]:
+            if AttrMapping_rev2[attr_idx] in [
+                'vehicle.moving',
+                'vehicle.parked',
+                'vehicle.stopped',
+            ]:
                 return AttrMapping_rev2[attr_idx]
             else:
                 return self.DefaultAttribute[label_name]
         elif label_name == 'pedestrian':
-            if AttrMapping_rev2[attr_idx] == 'pedestrian.moving' or \
-                AttrMapping_rev2[attr_idx] == 'pedestrian.standing' or \
-                    AttrMapping_rev2[attr_idx] == \
-                    'pedestrian.sitting_lying_down':
+            if AttrMapping_rev2[attr_idx] in [
+                'pedestrian.moving',
+                'pedestrian.standing',
+                'pedestrian.sitting_lying_down',
+            ]:
                 return AttrMapping_rev2[attr_idx]
             else:
                 return self.DefaultAttribute[label_name]
-        elif label_name == 'bicycle' or label_name == 'motorcycle':
-            if AttrMapping_rev2[attr_idx] == 'cycle.with_rider' or \
-                    AttrMapping_rev2[attr_idx] == 'cycle.without_rider':
+        elif label_name in ['bicycle', 'motorcycle']:
+            if AttrMapping_rev2[attr_idx] in [
+                'cycle.with_rider',
+                'cycle.without_rider',
+            ]:
                 return AttrMapping_rev2[attr_idx]
             else:
                 return self.DefaultAttribute[label_name]
@@ -419,7 +427,7 @@ class NuScenesMetric(BaseMetric):
             cam_boxes3d_for_nms = xywhr2xyxyr(cam_boxes3d.bev)
             boxes3d = cam_boxes3d.tensor
             # generate attr scores from attr labels
-            attrs = labels.new_tensor([attr for attr in attrs_per_frame])
+            attrs = labels.new_tensor(list(attrs_per_frame))
             boxes3d, scores, labels, attrs = box3d_multiclass_nms(
                 boxes3d,
                 cam_boxes3d_for_nms,
@@ -495,7 +503,7 @@ class NuScenesMetric(BaseMetric):
             boxes = lidar_nusc_box_to_global(self.data_infos[sample_id], boxes,
                                              classes,
                                              self.eval_detection_configs)
-            for i, box in enumerate(boxes):
+            for box in boxes:
                 name = classes[box.label]
                 if np.sqrt(box.velocity[0]**2 + box.velocity[1]**2) > 0.2:
                     if name in [
@@ -510,13 +518,12 @@ class NuScenesMetric(BaseMetric):
                         attr = 'cycle.with_rider'
                     else:
                         attr = self.DefaultAttribute[name]
+                elif name in ['pedestrian']:
+                    attr = 'pedestrian.standing'
+                elif name in ['bus']:
+                    attr = 'vehicle.stopped'
                 else:
-                    if name in ['pedestrian']:
-                        attr = 'pedestrian.standing'
-                    elif name in ['bus']:
-                        attr = 'vehicle.stopped'
-                    else:
-                        attr = self.DefaultAttribute[name]
+                    attr = self.DefaultAttribute[name]
 
                 nusc_anno = dict(
                     sample_token=sample_token,
@@ -750,7 +757,7 @@ def nusc_box_to_cam_box3d(boxes: List[NuScenesBox]):
     dims = torch.Tensor([b.wlh for b in boxes]).view(-1, 3)
     rots = torch.Tensor([b.orientation.yaw_pitch_roll[0]
                          for b in boxes]).view(-1, 1)
-    velocity = torch.Tensor([b.velocity[0::2] for b in boxes]).view(-1, 2)
+    velocity = torch.Tensor([b.velocity[::2] for b in boxes]).view(-1, 2)
 
     # convert nusbox to cambox convention
     dims[:, [0, 1, 2]] = dims[:, [1, 2, 0]]

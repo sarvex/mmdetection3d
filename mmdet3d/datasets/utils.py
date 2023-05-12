@@ -106,9 +106,9 @@ def get_loading_pipeline(pipeline):
             loading_pipeline.extend(get_loading_pipeline(inner_pipeline))
         elif is_loading:
             loading_pipeline.append(transform)
-    assert len(loading_pipeline) > 0, \
-        'The data pipeline in your config file must include ' \
-        'loading step.'
+    assert loading_pipeline, (
+        'The data pipeline in your config file must include ' 'loading step.'
+    )
     return loading_pipeline
 
 

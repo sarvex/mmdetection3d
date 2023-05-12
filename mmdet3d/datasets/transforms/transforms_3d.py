@@ -155,7 +155,7 @@ class RandomFlip3D(RandomFlip):
             dict: Flipped results, 'points', 'bbox3d_fields' keys are
             updated in the result dict.
         """
-        assert direction in ['horizontal', 'vertical']
+        assert direction in {'horizontal', 'vertical'}
         if self.flip_box3d:
             if 'gt_bboxes_3d' in input_dict:
                 if 'points' in input_dict:
@@ -169,10 +169,10 @@ class RandomFlip3D(RandomFlip):
 
         if 'centers_2d' in input_dict:
             assert self.sync_2d is True and direction == 'horizontal', \
-                'Only support sync_2d=True and horizontal flip with images'
+                    'Only support sync_2d=True and horizontal flip with images'
             w = input_dict['img_shape'][1]
             input_dict['centers_2d'][..., 0] = \
-                w - input_dict['centers_2d'][..., 0]
+                    w - input_dict['centers_2d'][..., 0]
             # need to modify the horizontal position of camera center
             # along u-axis in the image (flip like centers2d)
             # ['cam2img'][0][2] = c_u
@@ -220,12 +220,10 @@ class RandomFlip3D(RandomFlip):
             input_dict['pcd_vertical_flip'] = False
         else:
             if 'pcd_horizontal_flip' not in input_dict:
-                flip_horizontal = True if np.random.rand(
-                ) < self.flip_ratio_bev_horizontal else False
+                flip_horizontal = np.random.rand( ) < self.flip_ratio_bev_horizontal
                 input_dict['pcd_horizontal_flip'] = flip_horizontal
             if 'pcd_vertical_flip' not in input_dict:
-                flip_vertical = True if np.random.rand(
-                ) < self.flip_ratio_bev_vertical else False
+                flip_vertical = np.random.rand( ) < self.flip_ratio_bev_vertical
                 input_dict['pcd_vertical_flip'] = flip_vertical
 
         if 'transformation_3d_flow' not in input_dict:
@@ -275,15 +273,14 @@ class RandomJitterPoints(BaseTransform):
         seq_types = (list, tuple, np.ndarray)
         if not isinstance(jitter_std, seq_types):
             assert isinstance(jitter_std, (int, float)), \
-                f'unsupported jitter_std type {type(jitter_std)}'
+                    f'unsupported jitter_std type {type(jitter_std)}'
             jitter_std = [jitter_std, jitter_std, jitter_std]
         self.jitter_std = jitter_std
 
-        if clip_range is not None:
-            if not isinstance(clip_range, seq_types):
-                assert isinstance(clip_range, (int, float)), \
+        if clip_range is not None and not isinstance(clip_range, seq_types):
+            assert isinstance(clip_range, (int, float)), \
                     f'unsupported clip_range type {type(clip_range)}'
-                clip_range = [-clip_range, clip_range]
+            clip_range = [-clip_range, clip_range]
         self.clip_range = clip_range
 
     def transform(self, input_dict: dict) -> dict:
@@ -663,23 +660,24 @@ class GlobalRotScaleTrans(BaseTransform):
         seq_types = (list, tuple, np.ndarray)
         if not isinstance(rot_range, seq_types):
             assert isinstance(rot_range, (int, float)), \
-                f'unsupported rot_range type {type(rot_range)}'
+                    f'unsupported rot_range type {type(rot_range)}'
             rot_range = [-rot_range, rot_range]
         self.rot_range = rot_range
 
         assert isinstance(scale_ratio_range, seq_types), \
-            f'unsupported scale_ratio_range type {type(scale_ratio_range)}'
+                f'unsupported scale_ratio_range type {type(scale_ratio_range)}'
 
         self.scale_ratio_range = scale_ratio_range
 
         if not isinstance(translation_std, seq_types):
             assert isinstance(translation_std, (int, float)), \
-                f'unsupported translation_std type {type(translation_std)}'
+                    f'unsupported translation_std type {type(translation_std)}'
             translation_std = [
                 translation_std, translation_std, translation_std
             ]
-        assert all([std >= 0 for std in translation_std]), \
-            'translation_std should be positive'
+        assert all(
+            std >= 0 for std in translation_std
+        ), 'translation_std should be positive'
         self.translation_std = translation_std
         self.shift_height = shift_height
 
@@ -1074,10 +1072,7 @@ class PointSample(BaseTransform):
             choices = np.concatenate((far_inds, choices))
             # Shuffle points after sampling
             np.random.shuffle(choices)
-        if return_choices:
-            return points[choices], choices
-        else:
-            return points[choices]
+        return (points[choices], choices) if return_choices else points[choices]
 
     def transform(self, input_dict: dict) -> dict:
         """Transform function to sample points to in indoor scenes.
@@ -1231,12 +1226,14 @@ class IndoorPatchPointSample(BaseTransform):
             normalized_coord = coords / coord_max
             attributes = np.concatenate([attributes, normalized_coord], axis=1)
             if attribute_dims is None:
-                attribute_dims = dict()
-            attribute_dims.update(
-                dict(normalized_coord=[
-                    attributes.shape[1], attributes.shape[1] +
-                    1, attributes.shape[1] + 2
-                ]))
+                attribute_dims = {}
+            attribute_dims |= dict(
+                normalized_coord=[
+                    attributes.shape[1],
+                    attributes.shape[1] + 1,
+                    attributes.shape[1] + 2,
+                ]
+            )
 
         points = np.concatenate([centered_coords, attributes], axis=1)
         points = point_type(
@@ -1310,7 +1307,7 @@ class IndoorPatchPointSample(BaseTransform):
                     np.array([31.0, 31.0, 62.0]))
                 vidx = np.unique(vidx[:, 0] * 31.0 * 62.0 + vidx[:, 1] * 62.0 +
                                  vidx[:, 2])
-                flag1 = len(vidx) / 31.0 / 31.0 / 62.0 >= 0.02
+                flag1 = len(vidx) >= 1191.6399999999999
             else:
                 # if `min_unique_num` is provided, directly compare with it
                 flag1 = mask.sum() >= self.min_unique_num
@@ -1320,7 +1317,7 @@ class IndoorPatchPointSample(BaseTransform):
                 flag2 = True
             else:
                 flag2 = np.sum(cur_sem_mask != self.ignore_index) / \
-                               len(cur_sem_mask) >= 0.7
+                                   len(cur_sem_mask) >= 0.7
 
             if flag1 and flag2:
                 break
@@ -1358,8 +1355,9 @@ class IndoorPatchPointSample(BaseTransform):
         """
         points = input_dict['points']
 
-        assert 'pts_semantic_mask' in input_dict.keys(), \
-            'semantic mask should be provided in training and evaluation'
+        assert (
+            'pts_semantic_mask' in input_dict
+        ), 'semantic mask should be provided in training and evaluation'
         pts_semantic_mask = input_dict['pts_semantic_mask']
 
         points, choices = self._patch_points_sampling(points,
@@ -1371,7 +1369,7 @@ class IndoorPatchPointSample(BaseTransform):
         # 'eval_ann_info' will be passed to evaluator
         if 'eval_ann_info' in input_dict:
             input_dict['eval_ann_info']['pts_semantic_mask'] = \
-                pts_semantic_mask[choices]
+                    pts_semantic_mask[choices]
 
         pts_instance_mask = input_dict.get('pts_instance_mask', None)
 
@@ -1380,7 +1378,7 @@ class IndoorPatchPointSample(BaseTransform):
             # 'eval_ann_info' will be passed to evaluator
             if 'eval_ann_info' in input_dict:
                 input_dict['eval_ann_info']['pts_instance_mask'] = \
-                    pts_instance_mask[choices]
+                        pts_instance_mask[choices]
 
         return input_dict
 
@@ -1514,11 +1512,9 @@ class VoxelBasedPointSampler(BaseTransform):
             ],
                                       dtype=points.dtype)
             padding_points[:] = voxels[0]
-            sample_points = np.concatenate([voxels, padding_points], axis=0)
+            return np.concatenate([voxels, padding_points], axis=0)
         else:
-            sample_points = voxels
-
-        return sample_points
+            return voxels
 
     def transform(self, results: dict) -> dict:
         """Call function to sample points from multiple sweeps.
@@ -1647,17 +1643,14 @@ class AffineResize(BaseTransform):
             dict: Results after affine resize, 'affine_aug', 'trans_mat'
             keys are added in the result dict.
         """
+        img = results['img']
         # The results have gone through RandomShiftScale before AffineResize
         if 'center' not in results:
-            img = results['img']
             height, width = img.shape[:2]
             center = np.array([width / 2, height / 2], dtype=np.float32)
             size = np.array([width, height], dtype=np.float32)
             results['affine_aug'] = False
         else:
-            # The results did not go through RandomShiftScale before
-            # AffineResize
-            img = results['img']
             center = results['center']
             size = results['size']
 
@@ -1799,8 +1792,7 @@ class AffineResize(BaseTransform):
         image. Here we use two points to get the the third reference point.
         """
         d = ref_point1 - ref_point2
-        ref_point3 = ref_point2 + np.array([-d[1], d[0]])
-        return ref_point3
+        return ref_point2 + np.array([-d[1], d[0]])
 
     def __repr__(self) -> str:
         """str: Return a string that describes the module."""
@@ -2107,10 +2099,7 @@ class RandomCrop3D(RandomCrop):
 
         # manipulate camera intrinsic matrix
         # needs to apply offset to K instead of P2 (on KITTI)
-        if isinstance(results['cam2img'], list):
-            # TODO ignore this, but should handle it in the future
-            pass
-        else:
+        if not isinstance(results['cam2img'], list):
             K = results['cam2img'][:3, :3].copy()
             inv_K = np.linalg.inv(K)
             T = np.matmul(inv_K, results['cam2img'][:3])
@@ -2217,9 +2206,8 @@ class PhotoMetricDistortion3D(PhotoMetricDistortion):
 
         # mode == 0 --> do random contrast first
         # mode == 1 --> do random contrast last
-        if mode == 1:
-            if contrast_flag:
-                img *= alpha_value
+        if mode == 1 and contrast_flag:
+            img *= alpha_value
 
         # convert color from BGR to HSV
         img = mmcv.bgr2hsv(img)
@@ -2238,9 +2226,8 @@ class PhotoMetricDistortion3D(PhotoMetricDistortion):
         img = mmcv.hsv2bgr(img)
 
         # random contrast
-        if mode == 0:
-            if contrast_flag:
-                img *= alpha_value
+        if mode == 0 and contrast_flag:
+            img *= alpha_value
 
         # randomly swap channels
         if swap_flag:

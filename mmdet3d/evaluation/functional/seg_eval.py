@@ -104,11 +104,10 @@ def seg_eval(gt_labels, seg_preds, label2cat, ignore_index, logger=None):
     acc_cls = get_acc_cls(sum(hist_list))
 
     header = ['classes']
-    for i in range(len(label2cat)):
-        header.append(label2cat[i])
+    header.extend(label2cat[i] for i in range(len(label2cat)))
     header.extend(['miou', 'acc', 'acc_cls'])
 
-    ret_dict = dict()
+    ret_dict = {}
     table_columns = [['results']]
     for i in range(len(label2cat)):
         ret_dict[label2cat[i]] = float(iou[i])
@@ -117,10 +116,7 @@ def seg_eval(gt_labels, seg_preds, label2cat, ignore_index, logger=None):
     ret_dict['acc'] = float(acc)
     ret_dict['acc_cls'] = float(acc_cls)
 
-    table_columns.append([f'{miou:.4f}'])
-    table_columns.append([f'{acc:.4f}'])
-    table_columns.append([f'{acc_cls:.4f}'])
-
+    table_columns.extend(([f'{miou:.4f}'], [f'{acc:.4f}'], [f'{acc_cls:.4f}']))
     table_data = [header]
     table_rows = list(zip(*table_columns))
     table_data += table_rows

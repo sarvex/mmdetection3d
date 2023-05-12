@@ -202,8 +202,7 @@ def compute_averages(aps, options, class_labels):
     o25 = np.where(np.isclose(options['overlaps'], 0.25))
     o_all_but25 = np.where(
         np.logical_not(np.isclose(options['overlaps'], 0.25)))
-    avg_dict = {}
-    avg_dict['all_ap'] = np.nanmean(aps[d_inf, :, o_all_but25])
+    avg_dict = {'all_ap': np.nanmean(aps[d_inf, :, o_all_but25])}
     avg_dict['all_ap_50%'] = np.nanmean(aps[d_inf, :, o50])
     avg_dict['all_ap_25%'] = np.nanmean(aps[d_inf, :, o25])
     avg_dict['classes'] = {}
@@ -242,9 +241,7 @@ def assign_instances_for_scan(pred_info, gt_ids, options, valid_class_ids,
     for label in gt2pred:
         for gt in gt2pred[label]:
             gt['matched_pred'] = []
-    pred2gt = {}
-    for label in class_labels:
-        pred2gt[label] = []
+    pred2gt = {label: [] for label in class_labels}
     num_pred_instances = 0
     # mask of void labels in the ground truth
     bool_void = np.logical_not(np.in1d(gt_ids // 1000, valid_class_ids))
@@ -252,7 +249,7 @@ def assign_instances_for_scan(pred_info, gt_ids, options, valid_class_ids,
     for pred_mask_file in pred_info:
         label_id = int(pred_info[pred_mask_file]['label_id'])
         conf = pred_info[pred_mask_file]['conf']
-        if not label_id in id_to_label:  # noqa E713
+        if label_id not in id_to_label:  # noqa E713
             continue
         label_name = id_to_label[label_id]
         # read the mask
@@ -265,15 +262,16 @@ def assign_instances_for_scan(pred_info, gt_ids, options, valid_class_ids,
         if num < options['min_region_sizes'][0]:
             continue  # skip if empty
 
-        pred_instance = {}
-        pred_instance['filename'] = pred_mask_file
-        pred_instance['pred_id'] = num_pred_instances
-        pred_instance['label_id'] = label_id
-        pred_instance['vert_count'] = num
-        pred_instance['confidence'] = conf
-        pred_instance['void_intersection'] = np.count_nonzero(
-            np.logical_and(bool_void, pred_mask))
-
+        pred_instance = {
+            'filename': pred_mask_file,
+            'pred_id': num_pred_instances,
+            'label_id': label_id,
+            'vert_count': num,
+            'confidence': conf,
+            'void_intersection': np.count_nonzero(
+                np.logical_and(bool_void, pred_mask)
+            ),
+        }
         # matched gt instances
         matched_gt = []
         # go through all gt instances with matching label
@@ -318,13 +316,9 @@ def scannet_eval(preds, gts, options, valid_class_ids, class_labels,
         gt2pred, pred2gt = assign_instances_for_scan(pred, gt, options,
                                                      valid_class_ids,
                                                      class_labels, id_to_label)
-        matches[matches_key] = {}
-        matches[matches_key]['gt'] = gt2pred
-        matches[matches_key]['pred'] = pred2gt
-
+        matches[matches_key] = {'gt': gt2pred, 'pred': pred2gt}
     ap_scores = evaluate_matches(matches, class_labels, options)
-    avgs = compute_averages(ap_scores, options, class_labels)
-    return avgs
+    return compute_averages(ap_scores, options, class_labels)
 
 
 def get_options(options=None):
@@ -343,5 +337,5 @@ def get_options(options=None):
         distance_threshes=np.array([float('inf')]),
         distance_confs=np.array([-float('inf')]))
     if options is not None:
-        _options.update(options)
+        _options |= options
     return _options

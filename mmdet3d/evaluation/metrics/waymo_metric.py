@@ -129,7 +129,7 @@ class WaymoMetric(KittiMetric):
         # load annotations
         self.data_infos = load(self.ann_file)['data_list']
         assert len(results) == len(self.data_infos), \
-            'invalid list length of network outputs'
+                'invalid list length of network outputs'
         # different from kitti, waymo do not need to convert the ann file
         # handle the mv_image_based load_mode
         if self.load_type == 'mv_image_based':
@@ -138,15 +138,14 @@ class WaymoMetric(KittiMetric):
                 height = info['images'][self.default_cam_key]['height']
                 width = info['images'][self.default_cam_key]['width']
                 for (cam_key, img_info) in info['images'].items():
-                    camera_info = dict()
-                    camera_info['images'] = dict()
+                    camera_info = {'images': {}}
                     camera_info['images'][cam_key] = img_info
                     # TODO remove the check by updating the data info;
                     if 'height' not in img_info:
                         img_info['height'] = height
                         img_info['width'] = width
                     if 'cam_instances' in info \
-                            and cam_key in info['cam_instances']:
+                                and cam_key in info['cam_instances']:
                         camera_info['instances'] = info['cam_instances'][
                             cam_key]
                     else:
@@ -178,7 +177,7 @@ class WaymoMetric(KittiMetric):
         for metric in self.metrics:
             ap_dict = self.waymo_evaluate(
                 pklfile_prefix, metric=metric, logger=logger)
-            metric_dict.update(ap_dict)
+            metric_dict |= ap_dict
         if eval_tmp_dir is not None:
             eval_tmp_dir.cleanup()
 
@@ -205,15 +204,68 @@ class WaymoMetric(KittiMetric):
 
         import subprocess
 
-        if metric == 'mAP':
-            eval_str = 'mmdet3d/evaluation/functional/waymo_utils/' + \
-                f'compute_detection_metrics_main {pklfile_prefix}.bin ' + \
-                f'{self.waymo_bin_file}'
+        if metric == 'LET_mAP':
+            eval_str = (
+                f'mmdet3d/evaluation/functional/waymo_utils/compute_detection_let_metrics_main {pklfile_prefix}.bin '
+                + f'{self.waymo_bin_file}'
+            )
+
+            print(eval_str)
+            ret_bytes = subprocess.check_output(eval_str, shell=True)
+            ret_texts = ret_bytes.decode('utf-8')
+
+            print_log(ret_texts, logger=logger)
+            mAPL_splits = ret_texts.split('mAPL ')
+            mAP_splits = ret_texts.split('mAP ')
+            mAPH_splits = ret_texts.split('mAPH ')
+            ap_dict = {
+                'Vehicle mAPL': 0,
+                'Vehicle mAP': 0,
+                'Vehicle mAPH': 0,
+                'Pedestrian mAPL': 0,
+                'Pedestrian mAP': 0,
+                'Pedestrian mAPH': 0,
+                'Sign mAPL': 0,
+                'Sign mAP': 0,
+                'Sign mAPH': 0,
+                'Cyclist mAPL': 0,
+                'Cyclist mAP': 0,
+                'Cyclist mAPH': 0,
+                'Overall mAPL': 0,
+                'Overall mAP': 0,
+                'Overall mAPH': 0,
+            }
+            for idx, key in enumerate(ap_dict.keys()):
+                split_idx = int(idx / 3) + 1
+                if idx % 3 == 0:  # mAPL
+                    ap_dict[key] = float(mAPL_splits[split_idx].split(']')[0])
+                elif idx % 3 == 1:  # mAP
+                    ap_dict[key] = float(mAP_splits[split_idx].split(']')[0])
+                else:  # mAPH
+                    ap_dict[key] = float(mAPH_splits[split_idx].split(']')[0])
+            ap_dict['Overall mAPL'] = \
+                    (ap_dict['Vehicle mAPL'] + ap_dict['Pedestrian mAPL'] +
+                    ap_dict['Cyclist mAPL']) / 3
+            ap_dict['Overall mAP'] = \
+                    (ap_dict['Vehicle mAP'] + ap_dict['Pedestrian mAP'] +
+                    ap_dict['Cyclist mAP']) / 3
+            ap_dict['Overall mAPH'] = \
+                    (ap_dict['Vehicle mAPH'] + ap_dict['Pedestrian mAPH'] +
+                    ap_dict['Cyclist mAPH']) / 3
+        elif metric == 'mAP':
+            eval_str = (
+                f'mmdet3d/evaluation/functional/waymo_utils/compute_detection_metrics_main {pklfile_prefix}.bin '
+                + f'{self.waymo_bin_file}'
+            )
             print(eval_str)
             ret_bytes = subprocess.check_output(eval_str, shell=True)
             ret_texts = ret_bytes.decode('utf-8')
             print_log(ret_texts, logger=logger)
 
+            mAP_splits = ret_texts.split('mAP ')
+            mAPH_splits = ret_texts.split('mAPH ')
+            mAP_splits = ret_texts.split('mAP ')
+            mAPH_splits = ret_texts.split('mAPH ')
             ap_dict = {
                 'Vehicle/L1 mAP': 0,
                 'Vehicle/L1 mAPH': 0,
@@ -234,77 +286,27 @@ class WaymoMetric(KittiMetric):
                 'Overall/L1 mAP': 0,
                 'Overall/L1 mAPH': 0,
                 'Overall/L2 mAP': 0,
-                'Overall/L2 mAPH': 0
+                'Overall/L2 mAPH': 0,
             }
-            mAP_splits = ret_texts.split('mAP ')
-            mAPH_splits = ret_texts.split('mAPH ')
-            mAP_splits = ret_texts.split('mAP ')
-            mAPH_splits = ret_texts.split('mAPH ')
             for idx, key in enumerate(ap_dict.keys()):
                 split_idx = int(idx / 2) + 1
-                if idx % 2 == 0:  # mAP
-                    ap_dict[key] = float(mAP_splits[split_idx].split(']')[0])
-                else:  # mAPH
-                    ap_dict[key] = float(mAPH_splits[split_idx].split(']')[0])
+                ap_dict[key] = (
+                    float(mAP_splits[split_idx].split(']')[0])
+                    if idx % 2 == 0
+                    else float(mAPH_splits[split_idx].split(']')[0])
+                )
             ap_dict['Overall/L1 mAP'] = \
-                (ap_dict['Vehicle/L1 mAP'] + ap_dict['Pedestrian/L1 mAP'] +
+                    (ap_dict['Vehicle/L1 mAP'] + ap_dict['Pedestrian/L1 mAP'] +
                     ap_dict['Cyclist/L1 mAP']) / 3
             ap_dict['Overall/L1 mAPH'] = \
-                (ap_dict['Vehicle/L1 mAPH'] + ap_dict['Pedestrian/L1 mAPH'] +
+                    (ap_dict['Vehicle/L1 mAPH'] + ap_dict['Pedestrian/L1 mAPH'] +
                     ap_dict['Cyclist/L1 mAPH']) / 3
             ap_dict['Overall/L2 mAP'] = \
-                (ap_dict['Vehicle/L2 mAP'] + ap_dict['Pedestrian/L2 mAP'] +
+                    (ap_dict['Vehicle/L2 mAP'] + ap_dict['Pedestrian/L2 mAP'] +
                     ap_dict['Cyclist/L2 mAP']) / 3
             ap_dict['Overall/L2 mAPH'] = \
-                (ap_dict['Vehicle/L2 mAPH'] + ap_dict['Pedestrian/L2 mAPH'] +
+                    (ap_dict['Vehicle/L2 mAPH'] + ap_dict['Pedestrian/L2 mAPH'] +
                     ap_dict['Cyclist/L2 mAPH']) / 3
-        elif metric == 'LET_mAP':
-            eval_str = 'mmdet3d/evaluation/functional/waymo_utils/' + \
-                f'compute_detection_let_metrics_main {pklfile_prefix}.bin ' + \
-                f'{self.waymo_bin_file}'
-
-            print(eval_str)
-            ret_bytes = subprocess.check_output(eval_str, shell=True)
-            ret_texts = ret_bytes.decode('utf-8')
-
-            print_log(ret_texts, logger=logger)
-            ap_dict = {
-                'Vehicle mAPL': 0,
-                'Vehicle mAP': 0,
-                'Vehicle mAPH': 0,
-                'Pedestrian mAPL': 0,
-                'Pedestrian mAP': 0,
-                'Pedestrian mAPH': 0,
-                'Sign mAPL': 0,
-                'Sign mAP': 0,
-                'Sign mAPH': 0,
-                'Cyclist mAPL': 0,
-                'Cyclist mAP': 0,
-                'Cyclist mAPH': 0,
-                'Overall mAPL': 0,
-                'Overall mAP': 0,
-                'Overall mAPH': 0
-            }
-            mAPL_splits = ret_texts.split('mAPL ')
-            mAP_splits = ret_texts.split('mAP ')
-            mAPH_splits = ret_texts.split('mAPH ')
-            for idx, key in enumerate(ap_dict.keys()):
-                split_idx = int(idx / 3) + 1
-                if idx % 3 == 0:  # mAPL
-                    ap_dict[key] = float(mAPL_splits[split_idx].split(']')[0])
-                elif idx % 3 == 1:  # mAP
-                    ap_dict[key] = float(mAP_splits[split_idx].split(']')[0])
-                else:  # mAPH
-                    ap_dict[key] = float(mAPH_splits[split_idx].split(']')[0])
-            ap_dict['Overall mAPL'] = \
-                (ap_dict['Vehicle mAPL'] + ap_dict['Pedestrian mAPL'] +
-                    ap_dict['Cyclist mAPL']) / 3
-            ap_dict['Overall mAP'] = \
-                (ap_dict['Vehicle mAP'] + ap_dict['Pedestrian mAP'] +
-                    ap_dict['Cyclist mAP']) / 3
-            ap_dict['Overall mAPH'] = \
-                (ap_dict['Vehicle mAPH'] + ap_dict['Pedestrian mAPH'] +
-                    ap_dict['Cyclist mAPH']) / 3
         return ap_dict
 
     def format_results(self,
@@ -388,10 +390,10 @@ class WaymoMetric(KittiMetric):
         Returns:
             merged_box_dict (dict), store the merge results
         """
-        box_dict = dict()
+        box_dict = {}
         # convert list[dict] to dict[list]
         for key in box_dict_per_frame[0].keys():
-            box_dict[key] = list()
+            box_dict[key] = []
             for cam_idx in range(self.num_cams):
                 box_dict[key].append(box_dict_per_frame[cam_idx][key])
         # merge each elements
@@ -433,8 +435,7 @@ class WaymoMetric(KittiMetric):
         lidar2cam = np.array(lidar2cam).astype(np.float32)
         box_preds_camera = box_preds_lidar.convert_to(
             Box3DMode.CAM, lidar2cam, correct_yaw=True)
-        # Note: bbox is meaningless in final evaluation, set to 0
-        merged_box_dict = dict(
+        return dict(
             bbox=np.zeros([box_preds_lidar.tensor.shape[0], 4]),
             box3d_camera=box_preds_camera.tensor.numpy(),
             box3d_lidar=box_preds_lidar.tensor.numpy(),
@@ -442,7 +443,6 @@ class WaymoMetric(KittiMetric):
             label_preds=labels.numpy(),
             sample_idx=box_dict['sample_idx'],
         )
-        return merged_box_dict
 
     def bbox2result_kitti(self,
                           net_outputs: list,
@@ -473,7 +473,6 @@ class WaymoMetric(KittiMetric):
         print('\nConverting prediction to KITTI format')
         for idx, pred_dicts in enumerate(
                 mmengine.track_iter_progress(net_outputs)):
-            annos = []
             sample_idx = sample_id_list[idx]
             info = self.data_infos[sample_idx]
 
@@ -536,7 +535,6 @@ class WaymoMetric(KittiMetric):
                     anno['score'].append(score)
 
                 anno = {k: np.stack(v) for k, v in anno.items()}
-                annos.append(anno)
             else:
                 anno = {
                     'name': np.array([]),
@@ -549,8 +547,7 @@ class WaymoMetric(KittiMetric):
                     'rotation_y': np.array([]),
                     'score': np.array([]),
                 }
-                annos.append(anno)
-
+            annos = [anno]
             if submission_prefix is not None:
                 curr_file = f'{submission_prefix}/{sample_idx:06d}.txt'
                 with open(curr_file, 'w') as f:

@@ -164,10 +164,7 @@ def inference_detector(model: nn.Module,
     with torch.no_grad():
         results = model.test_step(collate_data)
 
-    if not is_batch:
-        return results[0], data[0]
-    else:
-        return results, data
+    return (results[0], data[0]) if not is_batch else (results, data)
 
 
 def inference_multi_modality_detector(model: nn.Module,
@@ -252,10 +249,7 @@ def inference_multi_modality_detector(model: nn.Module,
     with torch.no_grad():
         results = model.test_step(collate_data)
 
-    if not is_batch:
-        return results[0], data[0]
-    else:
-        return results, data
+    return (results[0], data[0]) if not is_batch else (results, data)
 
 
 def inference_mono_3d_detector(model: nn.Module,
@@ -320,10 +314,7 @@ def inference_mono_3d_detector(model: nn.Module,
     with torch.no_grad():
         results = model.test_step(collate_data)
 
-    if not is_batch:
-        return results[0]
-    else:
-        return results
+    return results[0] if not is_batch else results
 
 
 def inference_segmentor(model: nn.Module, pcds: PointsType):
@@ -350,10 +341,11 @@ def inference_segmentor(model: nn.Module, pcds: PointsType):
     # build the data pipeline
     test_pipeline = deepcopy(cfg.test_dataloader.dataset.pipeline)
 
-    new_test_pipeline = []
-    for pipeline in test_pipeline:
-        if pipeline['type'] != 'LoadAnnotations3D':
-            new_test_pipeline.append(pipeline)
+    new_test_pipeline = [
+        pipeline
+        for pipeline in test_pipeline
+        if pipeline['type'] != 'LoadAnnotations3D'
+    ]
     test_pipeline = Compose(new_test_pipeline)
 
     data = []
@@ -369,7 +361,4 @@ def inference_segmentor(model: nn.Module, pcds: PointsType):
     with torch.no_grad():
         results = model.test_step(collate_data)
 
-    if not is_batch:
-        return results[0], data[0]
-    else:
-        return results, data
+    return (results[0], data[0]) if not is_batch else (results, data)

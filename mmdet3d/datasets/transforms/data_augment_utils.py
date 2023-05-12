@@ -268,7 +268,7 @@ def _rotation_matrix_3d_(rot_mat_T, angle, axis):
         rot_mat_T[0, 2] = rot_sin
         rot_mat_T[2, 0] = -rot_sin
         rot_mat_T[2, 2] = rot_cos
-    elif axis == 2 or axis == -1:
+    elif axis in [2, -1]:
         rot_mat_T[0, 0] = rot_cos
         rot_mat_T[0, 1] = rot_sin
         rot_mat_T[1, 0] = -rot_sin
@@ -301,13 +301,12 @@ def points_transform_(points, centers, point_masks, loc_transform,
         _rotation_matrix_3d_(rot_mat_T[i], rot_transform[i], 2)
     for i in range(num_points):
         for j in range(num_box):
-            if valid_mask[j]:
-                if point_masks[i, j] == 1:
-                    points[i, :3] -= centers[j, :3]
-                    points[i:i + 1, :3] = points[i:i + 1, :3] @ rot_mat_T[j]
-                    points[i, :3] += centers[j, :3]
-                    points[i, :3] += loc_transform[j]
-                    break  # only apply first box's transform
+            if valid_mask[j] and point_masks[i, j] == 1:
+                points[i, :3] -= centers[j, :3]
+                points[i:i + 1, :3] = points[i:i + 1, :3] @ rot_mat_T[j]
+                points[i, :3] += centers[j, :3]
+                points[i, :3] += loc_transform[j]
+                break  # only apply first box's transform
 
 
 @numba.njit

@@ -28,11 +28,11 @@ def export_one_scan(scan_name,
                     label_map_file,
                     scannet_dir,
                     test_mode=False):
-    mesh_file = osp.join(scannet_dir, scan_name, scan_name + '_vh_clean_2.ply')
-    agg_file = osp.join(scannet_dir, scan_name,
-                        scan_name + '.aggregation.json')
-    seg_file = osp.join(scannet_dir, scan_name,
-                        scan_name + '_vh_clean_2.0.010000.segs.json')
+    mesh_file = osp.join(scannet_dir, scan_name, f'{scan_name}_vh_clean_2.ply')
+    agg_file = osp.join(scannet_dir, scan_name, f'{scan_name}.aggregation.json')
+    seg_file = osp.join(
+        scannet_dir, scan_name, f'{scan_name}_vh_clean_2.0.010000.segs.json'
+    )
     # includes axisAlignment info for the train set scans.
     meta_file = osp.join(scannet_dir, scan_name, f'{scan_name}.txt')
     mesh_vertices, semantic_labels, instance_labels, unaligned_bboxes, \

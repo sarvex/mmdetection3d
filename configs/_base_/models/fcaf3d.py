@@ -6,7 +6,7 @@ model = dict(
         type='FCAF3DHead',
         in_channels=(64, 128, 256, 512),
         out_channels=128,
-        voxel_size=.01,
+        voxel_size=0.01,
         pts_prune_threshold=100000,
         pts_assign_threshold=27,
         pts_center_threshold=18,
@@ -16,5 +16,6 @@ model = dict(
         bbox_loss=dict(type='AxisAlignedIoULoss'),
         cls_loss=dict(type='mmdet.FocalLoss'),
     ),
-    train_cfg=dict(),
-    test_cfg=dict(nms_pre=1000, iou_thr=.5, score_thr=.01))
+    train_cfg={},
+    test_cfg=dict(nms_pre=1000, iou_thr=0.5, score_thr=0.01),
+)

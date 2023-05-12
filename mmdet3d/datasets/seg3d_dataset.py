@@ -168,26 +168,18 @@ class Seg3DDataset(BaseDataset):
             label_mapping = {
                 cls_id: self.ignore_index
                 for cls_id in self.METAINFO['seg_all_class_ids']
-            }
-            label_mapping.update(
-                {cls_id: i
-                 for i, cls_id in enumerate(valid_class_ids)})
-            label2cat = {i: cat_name for i, cat_name in enumerate(new_classes)}
+            } | {cls_id: i for i, cls_id in enumerate(valid_class_ids)}
+            label2cat = dict(enumerate(new_classes))
         else:
             label_mapping = {
                 cls_id: self.ignore_index
                 for cls_id in self.METAINFO['seg_all_class_ids']
-            }
-            label_mapping.update({
+            } | {
                 cls_id: i
-                for i, cls_id in enumerate(
-                    self.METAINFO['seg_valid_class_ids'])
-            })
-            # map label to category name
-            label2cat = {
-                i: cat_name
-                for i, cat_name in enumerate(self.METAINFO['classes'])
+                for i, cls_id in enumerate(self.METAINFO['seg_valid_class_ids'])
             }
+            # map label to category name
+            label2cat = dict(enumerate(self.METAINFO['classes']))
             valid_class_ids = self.METAINFO['seg_valid_class_ids']
 
         return label_mapping, label2cat, valid_class_ids
@@ -237,7 +229,7 @@ class Seg3DDataset(BaseDataset):
         """
         if self.modality['use_lidar']:
             info['lidar_points']['lidar_path'] = \
-                osp.join(
+                    osp.join(
                     self.data_prefix.get('pts', ''),
                     info['lidar_points']['lidar_path'])
 
@@ -249,12 +241,12 @@ class Seg3DDataset(BaseDataset):
 
         if 'pts_instance_mask_path' in info:
             info['pts_instance_mask_path'] = \
-                osp.join(self.data_prefix.get('pts_instance_mask', ''),
+                    osp.join(self.data_prefix.get('pts_instance_mask', ''),
                          info['pts_instance_mask_path'])
 
         if 'pts_semantic_mask_path' in info:
             info['pts_semantic_mask_path'] = \
-                osp.join(self.data_prefix.get('pts_semantic_mask', ''),
+                    osp.join(self.data_prefix.get('pts_semantic_mask', ''),
                          info['pts_semantic_mask_path'])
 
         # only be used in `PointSegClassMapping` in pipeline
@@ -263,7 +255,7 @@ class Seg3DDataset(BaseDataset):
 
         # 'eval_ann_info' will be updated in loading transforms
         if self.test_mode and self.load_eval_anns:
-            info['eval_ann_info'] = dict()
+            info['eval_ann_info'] = {}
 
         return info
 

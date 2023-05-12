@@ -214,13 +214,15 @@ metainfo = dict(classes=class_names)
 input_modality = dict(use_lidar=True, use_camera=False)
 db_sampler = dict(
     data_root=data_root,
-    info_path=data_root + 'kitti_dbinfos_train.pkl',
+    info_path=f'{data_root}kitti_dbinfos_train.pkl',
     rate=1.0,
     prepare=dict(
         filter_by_difficulty=[-1],
-        filter_by_min_points=dict(Car=5, Pedestrian=5, Cyclist=5)),
+        filter_by_min_points=dict(Car=5, Pedestrian=5, Cyclist=5),
+    ),
     classes=class_names,
-    sample_groups=dict(Car=20, Pedestrian=15, Cyclist=15))
+    sample_groups=dict(Car=20, Pedestrian=15, Cyclist=15),
+)
 
 train_pipeline = [
     dict(type='LoadPointsFromFile', coord_type='LIDAR', load_dim=4, use_dim=4),
@@ -302,8 +304,9 @@ test_dataloader = val_dataloader
 
 val_evaluator = dict(
     type='KittiMetric',
-    ann_file=data_root + 'kitti_infos_val.pkl',
-    metric='bbox')
+    ann_file=f'{data_root}kitti_infos_val.pkl',
+    metric='bbox',
+)
 test_evaluator = val_evaluator
 
 # optimizer
@@ -350,8 +353,8 @@ param_scheduler = [
 ]
 
 train_cfg = dict(by_epoch=True, max_epochs=epoch_num, val_interval=50)
-val_cfg = dict()
-test_cfg = dict()
+val_cfg = {}
+test_cfg = {}
 auto_scale_lr = dict(enable=False, base_batch_size=32)
 
 default_scope = 'mmdet3d'

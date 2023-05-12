@@ -149,8 +149,9 @@ test_dataloader = val_dataloader
 
 val_evaluator = dict(
     type='KittiMetric',
-    ann_file=data_root + 'kitti_infos_val.pkl',
-    metric='bbox')
+    ann_file=f'{data_root}kitti_infos_val.pkl',
+    metric='bbox',
+)
 test_evaluator = val_evaluator
 
 # optimizer

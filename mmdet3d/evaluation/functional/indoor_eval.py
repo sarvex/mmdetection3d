@@ -80,7 +80,7 @@ def eval_det_cls(pred, gt, iou_thr=None):
             bbox = gt[img_id][0].new_box(gt_cur)
         else:
             bbox = gt[img_id]
-        det = [[False] * len(bbox) for i in iou_thr]
+        det = [[False] * len(bbox) for _ in iou_thr]
         npos += len(bbox)
         class_recs[img_id] = {'bbox': bbox, 'det': det}
 
@@ -93,23 +93,18 @@ def eval_det_cls(pred, gt, iou_thr=None):
         if cur_num == 0:
             continue
         pred_cur = torch.zeros((cur_num, 7), dtype=torch.float32)
-        box_idx = 0
-        for box, score in pred[img_id]:
+        for box_idx, (box, score) in enumerate(pred[img_id]):
             image_ids.append(img_id)
             confidence.append(score)
             pred_cur[box_idx] = box.tensor
-            box_idx += 1
         pred_cur = box.new_box(pred_cur)
         gt_cur = class_recs[img_id]['bbox']
         if len(gt_cur) > 0:
             # calculate iou in each image
             iou_cur = pred_cur.overlaps(pred_cur, gt_cur)
-            for i in range(cur_num):
-                ious.append(iou_cur[i])
+            ious.extend(iou_cur[i] for i in range(cur_num))
         else:
-            for i in range(cur_num):
-                ious.append(np.zeros(1))
-
+            ious.extend(np.zeros(1) for _ in range(cur_num))
     confidence = np.array(confidence)
 
     # sort by confidence
@@ -119,15 +114,15 @@ def eval_det_cls(pred, gt, iou_thr=None):
 
     # go down dets and mark TPs and FPs
     nd = len(image_ids)
-    tp_thr = [np.zeros(nd) for i in iou_thr]
-    fp_thr = [np.zeros(nd) for i in iou_thr]
+    tp_thr = [np.zeros(nd) for _ in iou_thr]
+    fp_thr = [np.zeros(nd) for _ in iou_thr]
     for d in range(nd):
         R = class_recs[image_ids[d]]
         iou_max = -np.inf
         BBGT = R['bbox']
-        cur_iou = ious[d]
-
         if len(BBGT) > 0:
+            cur_iou = ious[d]
+
             # compute overlaps
             for j in range(len(BBGT)):
                 # iou = get_iou_main(get_iou_func, (bb, BBGT[j,...]))
@@ -137,15 +132,15 @@ def eval_det_cls(pred, gt, iou_thr=None):
                     jmax = j
 
         for iou_idx, thresh in enumerate(iou_thr):
-            if iou_max > thresh:
-                if not R['det'][iou_idx][jmax]:
-                    tp_thr[iou_idx][d] = 1.
-                    R['det'][iou_idx][jmax] = 1
-                else:
-                    fp_thr[iou_idx][d] = 1.
-            else:
+            if (
+                iou_max > thresh
+                and R['det'][iou_idx][jmax]
+                or iou_max <= thresh
+            ):
                 fp_thr[iou_idx][d] = 1.
-
+            else:
+                tp_thr[iou_idx][d] = 1.
+                R['det'][iou_idx][jmax] = 1
     ret = []
     for iou_idx, thresh in enumerate(iou_thr):
         # compute precision recall
@@ -178,14 +173,14 @@ def eval_map_recall(pred, gt, ovthresh=None):
         tuple[dict]: dict results of recall, AP, and precision for all classes.
     """
 
-    ret_values = {}
-    for classname in gt.keys():
-        if classname in pred:
-            ret_values[classname] = eval_det_cls(pred[classname],
-                                                 gt[classname], ovthresh)
-    recall = [{} for i in ovthresh]
-    precision = [{} for i in ovthresh]
-    ap = [{} for i in ovthresh]
+    ret_values = {
+        classname: eval_det_cls(pred[classname], gt[classname], ovthresh)
+        for classname in gt.keys()
+        if classname in pred
+    }
+    recall = [{} for _ in ovthresh]
+    precision = [{} for _ in ovthresh]
+    ap = [{} for _ in ovthresh]
 
     for label in gt.keys():
         for iou_idx, thresh in enumerate(ovthresh):
@@ -263,14 +258,13 @@ def indoor_eval(gt_annos,
             gt[label][img_id].append(bbox)
 
     rec, prec, ap = eval_map_recall(pred, gt, metric)
-    ret_dict = dict()
+    ret_dict = {}
     header = ['classes']
     table_columns = [[label2cat[label]
                       for label in ap[0].keys()] + ['Overall']]
 
     for i, iou_thresh in enumerate(metric):
-        header.append(f'AP_{iou_thresh:.2f}')
-        header.append(f'AR_{iou_thresh:.2f}')
+        header.extend((f'AP_{iou_thresh:.2f}', f'AR_{iou_thresh:.2f}'))
         rec_list = []
         for label in ap[i].keys():
             ret_dict[f'{label2cat[label]}_AP_{iou_thresh:.2f}'] = float(

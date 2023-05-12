@@ -56,7 +56,7 @@ class LyftDataset(Det3DDataset):
                  filter_empty_gt: bool = True,
                  test_mode: bool = False,
                  **kwargs):
-        assert box_type_3d.lower() in ['lidar']
+        assert box_type_3d.lower() in {'lidar'}
         super().__init__(
             data_root=data_root,
             ann_file=ann_file,
@@ -83,8 +83,7 @@ class LyftDataset(Det3DDataset):
         ann_info = super().parse_ann_info(info)
         if ann_info is None:
             # empty instance
-            anns_results = dict()
-            anns_results['gt_bboxes_3d'] = np.zeros((0, 7), dtype=np.float32)
+            anns_results = {'gt_bboxes_3d': np.zeros((0, 7), dtype=np.float32)}
             anns_results['gt_labels_3d'] = np.zeros(0, dtype=np.int64)
             return anns_results
         gt_bboxes_3d = ann_info['gt_bboxes_3d']

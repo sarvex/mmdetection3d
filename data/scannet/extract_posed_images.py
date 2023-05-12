@@ -107,8 +107,8 @@ class SensorData:
                 depth_data, dtype=np.uint16).reshape(self.depth_height,
                                                      self.depth_width)
             imageio.imwrite(
-                os.path.join(output_path,
-                             self.index_to_str(f) + '.png'), depth)
+                os.path.join(output_path, f'{self.index_to_str(f)}.png'), depth
+            )
 
     def export_color_images(self, output_path):
         if not os.path.exists(output_path):
@@ -117,8 +117,8 @@ class SensorData:
             color = self.frames[f].decompress_color(
                 self.color_compression_type)
             imageio.imwrite(
-                os.path.join(output_path,
-                             self.index_to_str(f) + '.jpg'), color)
+                os.path.join(output_path, f'{self.index_to_str(f)}.jpg'), color
+            )
 
     @staticmethod
     def index_to_str(index):
@@ -136,8 +136,8 @@ class SensorData:
         for f in range(len(self.frames)):
             self.save_mat_to_file(
                 self.frames[f].camera_to_world,
-                os.path.join(output_path,
-                             self.index_to_str(f) + '.txt'))
+                os.path.join(output_path, f'{self.index_to_str(f)}.txt'),
+            )
 
     def export_intrinsics(self, output_path):
         if not os.path.exists(output_path):

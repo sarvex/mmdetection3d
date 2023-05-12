@@ -89,7 +89,7 @@ class Det3DDataset(BaseDataset):
         self.load_eval_anns = load_eval_anns
         _default_modality_keys = ('use_lidar', 'use_camera')
         if modality is None:
-            modality = dict()
+            modality = {}
 
         # Defaults to False if not specify
         for key in _default_modality_keys:
@@ -149,8 +149,9 @@ class Det3DDataset(BaseDataset):
         print_log('-' * 30, 'current')
         print_log(f'The length of the dataset: {len(self)}', 'current')
         content_show = [['category', 'number']]
-        for cat_name, num in self.num_ins_per_cat.items():
-            content_show.append([cat_name, num])
+        content_show.extend(
+            [cat_name, num] for cat_name, num in self.num_ins_per_cat.items()
+        )
         table = AsciiTable(content_show)
         print_log(
             f'The number of instances per category in the dataset:\n{table.table}',  # noqa: E501
@@ -170,7 +171,7 @@ class Det3DDataset(BaseDataset):
         """
         img_filtered_annotations = {}
         filter_mask = ann_info['gt_labels_3d'] > -1
-        for key in ann_info.keys():
+        for key in ann_info:
             if key != 'instances':
                 img_filtered_annotations[key] = (ann_info[key][filter_mask])
             else:
@@ -190,13 +191,11 @@ class Det3DDataset(BaseDataset):
             dict: Annotation information.
         """
         data_info = self.get_data_info(index)
-        # test model
-        if 'ann_info' not in data_info:
-            ann_info = self.parse_ann_info(data_info)
-        else:
-            ann_info = data_info['ann_info']
-
-        return ann_info
+        return (
+            self.parse_ann_info(data_info)
+            if 'ann_info' not in data_info
+            else data_info['ann_info']
+        )
 
     def parse_ann_info(self, info: dict) -> Union[dict, None]:
         """Process the `instances` in data info to `ann_info`.
@@ -227,38 +226,31 @@ class Det3DDataset(BaseDataset):
             'velocity': 'velocities',
         }
         instances = info['instances']
-        # empty gt
         if len(instances) == 0:
             return None
-        else:
-            keys = list(instances[0].keys())
-            ann_info = dict()
-            for ann_name in keys:
-                temp_anns = [item[ann_name] for item in instances]
-                # map the original dataset label to training label
-                if 'label' in ann_name and ann_name != 'attr_label':
-                    temp_anns = [
-                        self.label_mapping[item] for item in temp_anns
-                    ]
-                if ann_name in name_mapping:
-                    mapped_ann_name = name_mapping[ann_name]
-                else:
-                    mapped_ann_name = ann_name
+        keys = list(instances[0].keys())
+        ann_info = {}
+        for ann_name in keys:
+            temp_anns = [item[ann_name] for item in instances]
+            # map the original dataset label to training label
+            if 'label' in ann_name and ann_name != 'attr_label':
+                temp_anns = [
+                    self.label_mapping[item] for item in temp_anns
+                ]
+            mapped_ann_name = name_mapping.get(ann_name, ann_name)
+            if 'label' in ann_name:
+                temp_anns = np.array(temp_anns).astype(np.int64)
+            elif ann_name in name_mapping:
+                temp_anns = np.array(temp_anns).astype(np.float32)
+            else:
+                temp_anns = np.array(temp_anns)
 
-                if 'label' in ann_name:
-                    temp_anns = np.array(temp_anns).astype(np.int64)
-                elif ann_name in name_mapping:
-                    temp_anns = np.array(temp_anns).astype(np.float32)
-                else:
-                    temp_anns = np.array(temp_anns)
+            ann_info[mapped_ann_name] = temp_anns
+        ann_info['instances'] = info['instances']
 
-                ann_info[mapped_ann_name] = temp_anns
-            ann_info['instances'] = info['instances']
-
-            for label in ann_info['gt_labels_3d']:
-                if label != -1:
-                    cat_name = self.metainfo['classes'][label]
-                    self.num_ins_per_cat[cat_name] += 1
+        for label in ann_info['gt_labels_3d']:
+            if label != -1:
+                self.num_ins_per_cat[self.metainfo['classes'][label]] += 1
 
         return ann_info
 
@@ -337,13 +329,13 @@ class Det3DDataset(BaseDataset):
             old_labels (np.ndarray): The labels before through the pipeline.
             new_labels (torch.Tensor): The labels after through the pipeline.
         """
-        ori_num_per_cat = dict()
+        ori_num_per_cat = {}
         for label in old_labels:
             if label != -1:
                 cat_name = self.metainfo['classes'][label]
                 ori_num_per_cat[cat_name] = ori_num_per_cat.get(cat_name,
                                                                 0) + 1
-        new_num_per_cat = dict()
+        new_num_per_cat = {}
         for label in new_labels:
             if label != -1:
                 cat_name = self.metainfo['classes'][label]
@@ -380,18 +372,24 @@ class Det3DDataset(BaseDataset):
         input_dict['box_mode_3d'] = self.box_mode_3d
 
         # pre-pipline return None to random another in `__getitem__`
-        if not self.test_mode and self.filter_empty_gt:
-            if len(input_dict['ann_info']['gt_labels_3d']) == 0:
-                return None
+        if (
+            not self.test_mode
+            and self.filter_empty_gt
+            and len(input_dict['ann_info']['gt_labels_3d']) == 0
+        ):
+            return None
 
         example = self.pipeline(input_dict)
 
-        if not self.test_mode and self.filter_empty_gt:
-            # after pipeline drop the example with empty annotations
-            # return None to random another in `__getitem__`
-            if example is None or len(
-                    example['data_samples'].gt_instances_3d.labels_3d) == 0:
-                return None
+        if (
+            not self.test_mode
+            and self.filter_empty_gt
+            and (
+                example is None
+                or len(example['data_samples'].gt_instances_3d.labels_3d) == 0
+            )
+        ):
+            return None
 
         if self.show_ins_var:
             if 'ann_info' in ori_input_dict:

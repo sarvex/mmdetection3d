@@ -12,7 +12,8 @@ model = dict(
         mean=[123.675, 116.28, 103.53],
         std=[58.395, 57.12, 57.375],
         bgr_to_rgb=True,
-        pad_size_divisor=32),
+        pad_size_divisor=32,
+    ),
     backbone=dict(
         type='mmdet.ResNet',
         depth=50,
@@ -22,17 +23,20 @@ model = dict(
         norm_cfg=dict(type='BN', requires_grad=False),
         norm_eval=True,
         init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet50'),
-        style='pytorch'),
+        style='pytorch',
+    ),
     neck=dict(
         type='mmdet.FPN',
         in_channels=[256, 512, 1024, 2048],
         out_channels=256,
-        num_outs=4),
+        num_outs=4,
+    ),
     neck_3d=dict(
         type='IndoorImVoxelNeck',
         in_channels=256,
         out_channels=128,
-        n_blocks=[1, 1, 1]),
+        n_blocks=[1, 1, 1],
+    ),
     bbox_head=dict(
         type='ImVoxelHead',
         n_classes=10,
@@ -41,12 +45,14 @@ model = dict(
         n_reg_outs=7,
         pts_assign_threshold=27,
         pts_center_threshold=18,
-        prior_generator=prior_generator),
+        prior_generator=prior_generator,
+    ),
     prior_generator=prior_generator,
     n_voxels=[40, 40, 16],
     coord_type='DEPTH',
-    train_cfg=dict(),
-    test_cfg=dict(nms_pre=1000, iou_thr=.25, score_thr=.01))
+    train_cfg={},
+    test_cfg=dict(nms_pre=1000, iou_thr=0.25, score_thr=0.01),
+)
 
 dataset_type = 'SUNRGBDDataset'
 data_root = 'data/sunrgbd/'
@@ -117,8 +123,9 @@ test_dataloader = val_dataloader
 
 val_evaluator = dict(
     type='IndoorMetric',
-    ann_file=data_root + 'sunrgbd_infos_val.pkl',
-    metric='bbox')
+    ann_file=f'{data_root}sunrgbd_infos_val.pkl',
+    metric='bbox',
+)
 test_evaluator = val_evaluator
 
 # optimizer

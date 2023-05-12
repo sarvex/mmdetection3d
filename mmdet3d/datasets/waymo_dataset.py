@@ -164,15 +164,14 @@ class WaymoDataset(KittiDataset):
                                                  np.linalg.inv(lidar2cam))
         ann_info['gt_bboxes_3d'] = gt_bboxes_3d
 
-        anns_results = dict(
+        return dict(
             gt_bboxes_3d=gt_bboxes_3d,
             gt_labels_3d=ann_info['gt_labels_3d'],
             gt_bboxes=gt_bboxes,
             gt_bboxes_labels=gt_bboxes_labels,
             centers_2d=centers_2d,
-            depths=depths)
-
-        return anns_results
+            depths=depths,
+        )
 
     def load_data_list(self) -> List[dict]:
         """Add the load interval."""
@@ -191,9 +190,7 @@ class WaymoDataset(KittiDataset):
             return super().parse_data_info(info)
         elif self.load_type == 'fov_image_based':
             # only loading the fov image and the fov instance
-            new_image_info = {}
-            new_image_info[self.default_cam_key] = \
-                info['images'][self.default_cam_key]
+            new_image_info = {self.default_cam_key: info['images'][self.default_cam_key]}
             info['images'] = new_image_info
             info['instances'] = info['cam_instances'][self.default_cam_key]
             return super().parse_data_info(info)
@@ -202,7 +199,7 @@ class WaymoDataset(KittiDataset):
             data_list = []
             if self.modality['use_lidar']:
                 info['lidar_points']['lidar_path'] =  \
-                    osp.join(
+                        osp.join(
                         self.data_prefix.get('pts', ''),
                         info['lidar_points']['lidar_path'])
 
@@ -214,11 +211,10 @@ class WaymoDataset(KittiDataset):
                             cam_prefix, img_info['img_path'])
 
             for (cam_key, img_info) in info['images'].items():
-                camera_info = dict()
-                camera_info['images'] = dict()
+                camera_info = {'images': {}}
                 camera_info['images'][cam_key] = img_info
                 if 'cam_instances' in info \
-                        and cam_key in info['cam_instances']:
+                            and cam_key in info['cam_instances']:
                     camera_info['instances'] = info['cam_instances'][cam_key]
                 else:
                     camera_info['instances'] = []

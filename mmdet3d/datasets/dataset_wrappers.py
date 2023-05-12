@@ -45,8 +45,7 @@ class CBGSDataset(object):
                     # Filter categories that do not need to care.
                     # -1 indicate dontcare in MMDet3d.
                     class_sample_idxs[cat_id].append(idx)
-        duplicated_samples = sum(
-            [len(v) for _, v in class_sample_idxs.items()])
+        duplicated_samples = sum(len(v) for _, v in class_sample_idxs.items())
         class_distribution = {
             k: len(v) / duplicated_samples
             for k, v in class_sample_idxs.items()

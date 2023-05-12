@@ -114,11 +114,10 @@ class ScanNetDataset(Det3DDataset):
         """
         if 'axis_align_matrix' in info:
             return np.array(info['axis_align_matrix'])
-        else:
-            warnings.warn(
-                'axis_align_matrix is not found in ScanNet data info, please '
-                'use new pre-process scripts to re-generate ScanNet data')
-            return np.eye(4).astype(np.float32)
+        warnings.warn(
+            'axis_align_matrix is not found in ScanNet data info, please '
+            'use new pre-process scripts to re-generate ScanNet data')
+        return np.eye(4).astype(np.float32)
 
     def parse_data_info(self, info: dict) -> dict:
         """Process the raw data info.
@@ -159,7 +158,7 @@ class ScanNetDataset(Det3DDataset):
         ann_info = super().parse_ann_info(info)
         # empty gt
         if ann_info is None:
-            ann_info = dict()
+            ann_info = {}
             ann_info['gt_bboxes_3d'] = np.zeros((0, 6), dtype=np.float32)
             ann_info['gt_labels_3d'] = np.zeros((0, ), dtype=np.int64)
         # to target box structure

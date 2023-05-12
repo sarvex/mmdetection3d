@@ -96,11 +96,11 @@ class Kitti2DDataset(Det3DDataset):
 
     def _filter_imgs(self, min_size=32):
         """Filter images without ground truths."""
-        valid_inds = []
-        for i, img_info in enumerate(self.data_infos):
-            if len(img_info['annos']['name']) > 0:
-                valid_inds.append(i)
-        return valid_inds
+        return [
+            i
+            for i, img_info in enumerate(self.data_infos)
+            if len(img_info['annos']['name']) > 0
+        ]
 
     def get_ann_info(self, index):
         """Get annotation info according to the given index.
@@ -128,11 +128,10 @@ class Kitti2DDataset(Det3DDataset):
         difficulty = difficulty[selected]
         gt_labels = np.array([self.cat2label[n] for n in gt_names])
 
-        anns_results = dict(
+        return dict(
             bboxes=gt_bboxes.astype(np.float32),
             labels=gt_labels,
         )
-        return anns_results
 
     def prepare_train_img(self, idx):
         """Training image preparation.
@@ -215,9 +214,7 @@ class Kitti2DDataset(Det3DDataset):
         """
         from mmdet3d.structures.ops.transforms import bbox2result_kitti2d
         sample_idx = [info['image']['image_idx'] for info in self.data_infos]
-        result_files = bbox2result_kitti2d(outputs, self.classes, sample_idx,
-                                           out)
-        return result_files
+        return bbox2result_kitti2d(outputs, self.classes, sample_idx, out)
 
     def evaluate(self, result_files, eval_types=None):
         """Evaluation in KITTI protocol.
